@@ -1,0 +1,137 @@
+version: "3"
+services:
+  namenode:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+    container_name: namenode
+    restart: always
+    ports:
+      - 9870:9870
+      - 9000:9000
+    volumes:
+      - hadoop_namenode:/hadoop/dfs/name
+    environment:
+      - CLUSTER_NAME=test
+    env_file:
+      - hadoop.env
+    networks:
+      - spark-hadoop-network
+
+  datanode:
+    build: .
+    container_name: datanode
+    restart: always
+    volumes:
+      - hadoop_datanode:/hadoop/dfs/data
+    environment:
+      SERVICE_PRECONDITION: "namenode:9870"
+    env_file:
+      - hadoop.env
+    networks:
+      - spark-hadoop-network
+
+  resourcemanager:
+    image: bde2020/hadoop-resourcemanager:2.0.0-hadoop3.2.1-java8
+    container_name: resourcemanager
+    restart: always
+    environment:
+      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864"
+    env_file:
+      - hadoop.env
+    networks:
+      - spark-hadoop-network
+
+  nodemanager1:
+    image: bde2020/hadoop-nodemanager:2.0.0-hadoop3.2.1-java8
+    container_name: nodemanager
+    restart: always
+    environment:
+      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864 resourcemanager:8088"
+    env_file:
+      - hadoop.env
+    networks:
+      - spark-hadoop-network
+
+  historyserver:
+    image: bde2020/hadoop-historyserver:2.0.0-hadoop3.2.1-java8
+    container_name: historyserver
+    restart: always
+    environment:
+      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864 resourcemanager:8088"
+    volumes:
+      - hadoop_historyserver:/hadoop/yarn/timeline
+    env_file:
+      - hadoop.env
+    networks:
+      - spark-hadoop-network
+
+  spark-master:
+    image: bitnami/spark:latest
+    container_name: spark-master
+    restart: always
+    ports:
+      - 7077:7077  # Spark master port
+      - 8080:8080  # Spark web UI
+    environment:
+      - SPARK_MODE=master
+      - SPARK_MASTER_HOST=spark-master
+      - SPARK_MASTER_PORT=7077
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_EXECUTOR_MEMORY=1G
+      - SPARK_DRIVER_MEMORY=1G
+      - SPARK_YARN_MODE=true  # Enable YARN mode
+    depends_on:
+      - namenode
+      - resourcemanager
+    volumes:
+      - spark_data:/spark
+    networks:
+      - spark-hadoop-network
+
+  spark-worker:
+    image: bitnami/spark:latest
+    container_name: spark-worker
+    restart: always
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_MEMORY=1G
+      - SPARK_WORKER_CORES=2
+    depends_on:
+      - spark-master
+      - resourcemanager
+    volumes:
+      - spark_data:/spark
+    networks:
+      - spark-hadoop-network
+
+  jupyter:
+    image: jupyter/pyspark-notebook:latest
+    container_name: jupyter
+    restart: always
+    ports:
+      - 8888:8888
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+      - SPARK_MASTER=spark://spark-master:7077
+      - PYSPARK_PYTHON=python3
+      - PYSPARK_DRIVER_PYTHON=jupyter
+      - PYSPARK_DRIVER_PYTHON_OPTS="notebook"
+    depends_on:
+      - spark-master
+      - spark-worker
+    networks:
+      - spark-hadoop-network
+    volumes:
+      - jupyter_data:/home/jovyan/work
+
+volumes:
+  hadoop_namenode:
+  hadoop_datanode:
+  hadoop_historyserver:
+  spark_data:
+  jupyter_data:
+
+
+networks:
+  spark-hadoop-network:
+    driver: bridge
