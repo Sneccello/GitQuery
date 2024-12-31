@@ -7,11 +7,11 @@ from pyspark.sql.functions import lag
 from pyspark.sql import functions as F, SparkSession
 
 
-def get_union_df(config, repositories: List[str]):
+def get_union_df(spark_session, config, repositories: List[str]):
     dfs = []
-    spark = get_spark_session(config)
+
     for repo_id in repositories:
-        df = spark.read.json(f"{get_gitlogs_hdfs_folder(config)}/{repo_id}/*.json")
+        df = spark_session.read.json(f"{get_gitlogs_hdfs_folder(config)}/{repo_id}/*.json")
         df = df.withColumn("repo_id", lit(repo_id))
         dfs.append(df)
 
@@ -24,9 +24,6 @@ def get_union_df(config, repositories: List[str]):
 
     return df
 
-def agg_commits_per(config, agg_by: List[str], repositories: List[str]):
-    df = get_union_df(config, repositories)
-    return df.groupby(*agg_by).count()
 
 
 def process_partition(iterator):
@@ -45,29 +42,19 @@ def process_partition(iterator):
         result.append(record)
     return result
 
-def get_spark_session(config):
-    session = SparkSession.builder \
-        .master(config.SPARK_MASTER) \
-        .appName(config.APP_NAME) \
-        .getOrCreate()
-    for file in os.listdir(os.getcwd()):
-        if file.endswith('.py'):
-            session.sparkContext.addPyFile(file)
-    return session
-
 
 def get_gitlogs_hdfs_folder(config):
     return f"hdfs://{config.HDFS_HOST}:{config.HDFS_RPC_PORT}{config.HDFS_GITLOGS_PATH}"
 
-def load_gitlog_file(config: "config.Config", repo_id: str):
-    df = get_spark_session(config).read.text(
+def load_gitlog_file(spark_session, config: "config.Config", repo_id: str):
+    df = spark_session.read.text(
         f"{get_gitlogs_hdfs_folder(config)}/{repo_id}.gitlog"
     )
     return df.rdd.zipWithIndex().map(lambda x: (x[0][0], x[1])).toDF(["line", "lineIdx"])
 
-def create_gitlog_rdd(config, repo_id):
+def create_gitlog_rdd(spark_session, config, repo_id):
 
-    gitlogs_df = load_gitlog_file(config, repo_id)
+    gitlogs_df = load_gitlog_file(spark_session, config, repo_id)
 
     commit_hash_pattern = r"commit: ([a-f0-9]{40})"
     df_commit_indices = gitlogs_df.withColumn("commitHash", regexp_extract("line", commit_hash_pattern, 1))

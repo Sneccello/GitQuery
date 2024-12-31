@@ -5,7 +5,7 @@ import streamlit as st
 
 from git_utils import clone_repository, create_gitlog_file, get_repo_id, get_git_clone_link
 from hdfs_utils import upload_to_hdfs, list_hdfs
-from session_utils import get_config, SessionMetaKeys
+from session_utils import get_config, SessionMetaKeys, get_spark_session
 from spark_utils import create_gitlog_rdd
 
 
@@ -30,7 +30,7 @@ def display_load_workflow(repo_link: str):
         )
 
     with st.spinner('Creating gitlog RDD with PySpark'):
-        create_gitlog_rdd(get_config(), get_repo_id(repo_link))
+        create_gitlog_rdd(get_spark_session() ,get_config(), get_repo_id(repo_link))
 
 
 def display_add_workflow():

@@ -1,7 +1,10 @@
 import dataclasses
 import enum
 import json
+import os
+
 import streamlit as st
+from pyspark.sql import SparkSession
 
 
 @dataclasses.dataclass
@@ -23,6 +26,17 @@ class Config:
 def get_config():
     return Config.from_json('config.json')
 
+@st.cache_resource
+def get_spark_session():
+    config = get_config()
+    session = SparkSession.builder \
+        .master(config.SPARK_MASTER) \
+        .appName(config.APP_NAME) \
+        .getOrCreate()
+    for file in os.listdir(os.getcwd()):
+        if file.endswith('.py'):
+            session.sparkContext.addPyFile(file)
+    return session
 
 
 class SessionMetaKeys(enum.Enum):
