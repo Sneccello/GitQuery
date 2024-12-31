@@ -17,7 +17,7 @@ services:
       - spark-hadoop-network
 
   datanode:
-    build: .
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
     container_name: datanode
     restart: always
     volumes:
@@ -124,13 +124,31 @@ services:
     volumes:
       - jupyter_data:/home/jovyan/work
 
+  streamlit:
+    build:
+      context: .
+      dockerfile: Dockerfile.streamlit
+    container_name: streamlit
+    restart: always
+    ports:
+      - 8501:8501
+    environment:
+      - PYTHON_VERSION=3.12
+    volumes:
+      - ./streamlit_app:/app
+    networks:
+      - spark-hadoop-network
+    depends_on:
+      - spark-master
+      - spark-worker
+
 volumes:
   hadoop_namenode:
   hadoop_datanode:
   hadoop_historyserver:
   spark_data:
   jupyter_data:
-
+  streamlit:
 
 networks:
   spark-hadoop-network:
