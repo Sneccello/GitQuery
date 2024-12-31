@@ -1,0 +1,87 @@
+import os
+import plotly.express as px
+import streamlit as st
+
+from hdfs_utils import list_hdfs, upload_to_hdfs, get_rdd_folders
+from git_utils import create_gitlog_file, get_repo_id
+from page_sidebar import render_sidebar
+from session_utils import get_config, SessionMetaKeys
+from spark_utils import create_gitlog_rdd, agg_commits_per, get_union_df
+
+
+#TODO 24/12/31 13:23:09 WARN WindowExec: No Partition Defined for Window operation! Moving all data to a single partition, this can cause serious performance degradation.
+
+
+def setup():
+
+    st.set_page_config(
+        page_title="GitInsights",
+        page_icon="🧊",
+        layout="wide",
+        initial_sidebar_state="expanded",
+    )
+
+    if SessionMetaKeys.HDFS_LIST_RESULT not in st.session_state:
+        st.session_state[SessionMetaKeys.HDFS_LIST_RESULT] = list_hdfs(get_config(), get_config().HDFS_GITLOGS_PATH)
+
+    if SessionMetaKeys.SELECTED_REPOSITORIES not in st.session_state:
+        st.session_state[SessionMetaKeys.SELECTED_REPOSITORIES] =\
+            get_rdd_folders(st.session_state[SessionMetaKeys.HDFS_LIST_RESULT])
+
+
+def display_filter():
+    hdfs_list = st.session_state[SessionMetaKeys.HDFS_LIST_RESULT]
+
+    rdd_folders = get_rdd_folders(hdfs_list)
+
+    st.write("## Select Repositories To Analyze")
+    options = st.multiselect(
+        "What Repositories You Would like to Analyze?",
+        rdd_folders,
+        rdd_folders,
+        label_visibility="collapsed"
+    )
+    if options != st.session_state[SessionMetaKeys.SELECTED_REPOSITORIES]:
+        st.session_state[SessionMetaKeys.SELECTED_REPOSITORIES] = options
+        st.rerun()
+
+def display_commits_per_author():
+    df = agg_commits_per(get_config(), ["author"], st.session_state[SessionMetaKeys.SELECTED_REPOSITORIES])
+    fig = px.pie(df, names='author', values='count', title='Commits Per Author')
+    st.plotly_chart(fig)
+
+def display_commits_per_repo():
+    df = agg_commits_per(get_config(), ["repo_id"], st.session_state[SessionMetaKeys.SELECTED_REPOSITORIES])
+    fig = px.bar(df, x='repo_id', y='count', title='Repository Commits')
+    st.plotly_chart(fig)
+
+def display_commit_activity():
+    df = get_union_df(get_config(), st.session_state[SessionMetaKeys.SELECTED_REPOSITORIES])
+
+    df = df.groupBy("repo_id", "year_month").count().orderBy("year_month")
+    fig = px.line(df, x='year_month', y='count', color='repo_id', title='Commits Over Time')
+    st.plotly_chart(fig)
+
+def display_default_plots():
+
+    display_commit_activity()
+
+    col1, _,  col2 = st.columns([10, 1, 10])
+
+    with col1:
+        display_commits_per_author()
+    with col2:
+        display_commits_per_repo()
+
+
+
+def main():
+
+    setup()
+    render_sidebar()
+    display_filter()
+    display_default_plots()
+
+
+if __name__ == "__main__":
+    main()
