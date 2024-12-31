@@ -1,14 +1,9 @@
-import os
-import plotly.express as px
 import streamlit as st
-from pyspark.sql import SparkSession
-
-from hdfs_utils import list_hdfs, upload_to_hdfs, get_rdd_folders
-from git_utils import create_gitlog_file, get_repo_id
-from page_plots import display_commit_activity, display_commits_per_repo, display_commits_per_author
+from hdfs_utils import list_hdfs, get_rdd_folders
+from page_plots import display_commit_activity, display_commits_per_repo, display_commits_per_author, \
+    display_filechanges_per_repo
 from page_sidebar import render_sidebar
-from session_utils import get_config, SessionMetaKeys, get_spark_session
-from spark_utils import create_gitlog_rdd, get_union_df
+from session_utils import get_config, SessionMetaKeys
 
 
 #TODO 24/12/31 13:23:09 WARN WindowExec: No Partition Defined for Window operation! Moving all data to a single partition, this can cause serious performance degradation.
@@ -55,6 +50,7 @@ def display_default_plots():
 
     with col1:
         display_commits_per_author()
+        display_filechanges_per_repo()
     with col2:
         display_commits_per_repo()
 

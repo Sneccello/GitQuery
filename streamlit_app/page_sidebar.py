@@ -4,7 +4,7 @@ import subprocess
 import streamlit as st
 
 from git_utils import clone_repository, create_gitlog_file, get_repo_id, get_git_clone_link
-from hdfs_utils import upload_to_hdfs, list_hdfs
+from hdfs_utils import upload_to_hdfs, list_hdfs, get_rdd_folders
 from session_utils import get_config, SessionMetaKeys, get_spark_session
 from spark_utils import create_gitlog_rdd
 
@@ -52,15 +52,18 @@ def refresh_hdfs():
     res = list_hdfs(get_config(), get_config().HDFS_GITLOGS_PATH)
     st.session_state[SessionMetaKeys.HDFS_LIST_RESULT] = res
 
-
 def display_hdfs_list():
-    st.title("HDFS List")
+    st.title("Loaded Repositories")
     refresh = st.button("Refresh HDFS")
     if refresh:
         with st.spinner('Refreshing HDFS...'):
             refresh_hdfs()
-    for file_or_dir in st.session_state[SessionMetaKeys.HDFS_LIST_RESULT]:
-        st.write(file_or_dir)
+
+    rdd_folders = get_rdd_folders(st.session_state[SessionMetaKeys.HDFS_LIST_RESULT])
+    config = get_config()
+    for rdd_dir in rdd_folders:
+        hdfs_url = f"http://localhost:{config.HDFS_HTTP_PORT}/explorer.html#/{config.HDFS_GITLOGS_PATH}/{rdd_dir}"
+        st.markdown(f"[{rdd_dir}]({hdfs_url})")
 
 
 def render_sidebar():
