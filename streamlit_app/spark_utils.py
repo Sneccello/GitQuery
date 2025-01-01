@@ -7,7 +7,7 @@ from pyspark.sql.functions import lag
 from pyspark.sql import functions as F, SparkSession
 
 
-def get_union_df(spark_session, config, repositories: List[str]):
+def get_normalized_df(spark_session, config, repositories: List[str]):
     dfs = []
 
     for repo_id in repositories:

@@ -1,7 +1,6 @@
 FROM python:3.12-rc-buster
-COPY . /usr/src/app
+COPY .. /usr/src/app
 
-# Install OpenJDK-11
 RUN apt-get update && \
     apt-get install -y openjdk-11-jre-headless && \
     apt-get clean;
@@ -13,7 +12,7 @@ RUN apt-get update && apt-get install -y \
 
 
 WORKDIR /app
-COPY ./streamlit_app/requirements.txt /app/requirements.txt
+COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 EXPOSE 8501
@@ -31,4 +30,4 @@ RUN echo "fs.defaultFS=${HDFS_NAMENODE_URI}" > $HADOOP_CONF_DIR/core-site.xml \
     && echo "  </property>" >> $HADOOP_CONF_DIR/core-site.xml \
     && echo "</configuration>" >> $HADOOP_CONF_DIR/core-site.xml
 
-CMD ["streamlit", "run", "app.py"]
+CMD ["streamlit", "run", "About.py"]

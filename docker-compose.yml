@@ -126,8 +126,8 @@ services:
 
   streamlit:
     build:
-      context: .
-      dockerfile: Dockerfile.streamlit
+      context: streamlit_app/
+      dockerfile: Dockerfile
     container_name: streamlit
     restart: always
     ports:
