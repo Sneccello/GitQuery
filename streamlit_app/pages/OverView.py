@@ -9,7 +9,7 @@ from session_utils import get_config, SessionMetaKeys
 
 
 #TODO 24/12/31 13:23:09 WARN WindowExec: No Partition Defined for Window operation! Moving all data to a single partition, this can cause serious performance degradation.
-
+#TODO multiselect list is not preserved across page changes
 def display_filter():
     hdfs_list = st.session_state[SessionMetaKeys.HDFS_LIST_RESULT]
 
