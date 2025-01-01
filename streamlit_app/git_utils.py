@@ -1,4 +1,14 @@
 import subprocess
+from git import RemoteProgress
+
+class CloneProgress(RemoteProgress):
+    def __init__(self):
+        super().__init__()
+        self.progress = 0
+
+    def update(self, op_code, cur_count, max_count=None, message=''):
+        if max_count:
+            self.progress = (cur_count / max_count) * 100
 
 
 def get_repo_id(repo_link):
@@ -7,13 +17,11 @@ def get_repo_id(repo_link):
     owner = url_parts[-2]
     return f'{owner}_{repo_name}'
 
-def get_git_clone_link(repo_or_gitfile: str):
+def get_git_repo_link(repo_or_gitfile: str):
     if repo_or_gitfile.endswith(".git"):
-        return repo_or_gitfile
-    return repo_or_gitfile + '.git'
+        return repo_or_gitfile.rstrip(".git")
+    return repo_or_gitfile
 
-def clone_repository(repo_link: str, output_dir: str):
-    subprocess.run(['git', 'clone', repo_link, output_dir], check=True)
 
 def create_gitlog_file(repo_dir: str, output_path: str):
 

@@ -25,8 +25,8 @@ def display_commit_activity():
 
 def display_filechanges_per_repo():
     df = get_union_df(get_spark_session(), get_config(), st.session_state[SessionMetaKeys.SELECTED_REPOSITORIES])
-    df = df.withColumn("Modified Files", F.size(F.col("files")))
+    df = df.withColumn("Modified Files Per Commit", F.size(F.col("files")))
 
-    fig = px.box(df, x='repo_id', y="Modified Files")
+    fig = px.box(df, x='repo_id', y="Modified Files Per Commit")
 
     st.plotly_chart(fig)

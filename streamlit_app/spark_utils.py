@@ -78,5 +78,5 @@ def create_gitlog_rdd(spark_session, config, repo_id):
     )
     commits = commits.rdd.mapPartitions(process_partition).toDF()
 
-    output_path = f"h{get_gitlogs_hdfs_folder(config)}/{repo_id}"
+    output_path = f"{get_gitlogs_hdfs_folder(config)}/{repo_id}"
     commits.write.mode("overwrite").json(output_path)

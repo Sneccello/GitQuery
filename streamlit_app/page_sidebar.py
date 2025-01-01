@@ -1,21 +1,41 @@
 import os
 import subprocess
+import threading
+import time
 
+import git
 import streamlit as st
 
-from git_utils import clone_repository, create_gitlog_file, get_repo_id, get_git_clone_link
+from git_utils import create_gitlog_file, get_repo_id, get_git_repo_link, CloneProgress
 from hdfs_utils import upload_to_hdfs, list_hdfs, get_rdd_folders
 from session_utils import get_config, SessionMetaKeys, get_spark_session
 from spark_utils import create_gitlog_rdd
 
 
+def clone_repo_thread(repo_url, clone_dir, progress_obj):
+    try:
+        # Clone the repository with the CloneProgress object
+        git.Repo.clone_from(repo_url, clone_dir, progress=progress_obj)
+    except Exception as e:
+        st.error(f"Error during clone: {e}")
+
 def display_load_workflow(repo_link: str):
     temp_dir_name = f"temp-dir-{str(hash(repo_link))}"
     temp_dir = os.path.join(os.getcwd(), temp_dir_name)
 
+    cloning_progress = st.progress(0, text='Cloning Repository...')
 
-    with st.spinner('Cloning Repository...'):
-        clone_repository(repo_link, temp_dir)
+    progress_obj = CloneProgress()
+    clone_thread = threading.Thread(target=clone_repo_thread, args=(repo_link, temp_dir, progress_obj))
+    clone_thread.start()
+
+    while True:
+        if progress_obj.progress >= 100:
+            cloning_progress.progress(100)
+            break
+        else:
+            cloning_progress.progress(progress_obj.progress / 100, text='Cloning Repository...')
+        time.sleep(1)
 
     with st.spinner('Creating Gitlog files...'):
         output_filename = f"{get_repo_id(repo_link)}.gitlog"
@@ -40,9 +60,9 @@ def display_add_workflow():
         placeholder="https://github.com/Sneccello/WordMaze",
         label_visibility="collapsed"
     )
-    start_load = st.button("Start Job")
+    start_load = st.button("Start Spark Job")
     if start_load:
-        repo_link = get_git_clone_link(repo_input)
+        repo_link = get_git_repo_link(repo_input)
         display_load_workflow(repo_link)
         st.success("RDD Added")
         refresh_hdfs()
