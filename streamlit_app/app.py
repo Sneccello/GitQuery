@@ -1,7 +1,9 @@
 import streamlit as st
+
+
 from hdfs_utils import list_hdfs, get_rdd_folders
 from page_plots import display_commit_activity, display_commits_per_repo, display_commits_per_author, \
-    display_filechanges_per_repo
+    display_filechanges_per_repo, display_top_contributors
 from page_sidebar import render_sidebar
 from session_utils import get_config, SessionMetaKeys
 
@@ -42,6 +44,7 @@ def display_filter():
         st.session_state[SessionMetaKeys.SELECTED_REPOSITORIES] = options
         st.rerun()
 
+
 def display_default_plots():
 
     display_commit_activity()
@@ -53,6 +56,7 @@ def display_default_plots():
         display_filechanges_per_repo()
     with col2:
         display_commits_per_repo()
+        display_top_contributors()
 
 
 def main():

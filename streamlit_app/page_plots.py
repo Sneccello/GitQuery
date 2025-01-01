@@ -3,6 +3,7 @@ import streamlit as st
 from session_utils import get_config, SessionMetaKeys, get_spark_session
 from spark_utils import get_union_df
 from pyspark.sql import functions as F
+from pyspark.sql.functions import desc, concat, col, lit
 
 def display_commits_per_author():
     df = get_union_df(get_spark_session(), get_config(), st.session_state[SessionMetaKeys.SELECTED_REPOSITORIES])
@@ -27,6 +28,18 @@ def display_filechanges_per_repo():
     df = get_union_df(get_spark_session(), get_config(), st.session_state[SessionMetaKeys.SELECTED_REPOSITORIES])
     df = df.withColumn("Modified Files Per Commit", F.size(F.col("files")))
 
-    fig = px.box(df, x='repo_id', y="Modified Files Per Commit")
+    fig = px.box(df, x='repo_id', y="Modified Files Per Commit", title='File Changes Per Commit')
+    st.plotly_chart(fig)
 
+
+def display_top_contributors():
+    df = get_union_df(get_spark_session(), get_config(), st.session_state[SessionMetaKeys.SELECTED_REPOSITORIES])
+
+    df = df.groupby('repo_id', 'author') \
+        .agg(F.count('*').alias('Commit Count')) \
+        .orderBy(F.desc('Commit Count')) \
+        .limit(5)
+
+    df = df.withColumn("Contributor", concat(col("repo_id"), lit("/"), col("author")))
+    fig = px.bar(df, x='Contributor', y='Commit Count', title='Top Contributors')
     st.plotly_chart(fig)
