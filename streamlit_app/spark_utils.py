@@ -1,10 +1,8 @@
-import os
 from typing import List
 
 from pyspark.sql.functions import regexp_extract, to_timestamp, col, lit
 from pyspark.sql.window import Window
-from pyspark.sql.functions import lag
-from pyspark.sql import functions as F, SparkSession
+from pyspark.sql import functions as F
 
 
 def get_normalized_df(spark_session, config, repositories: List[str]):
@@ -15,6 +13,7 @@ def get_normalized_df(spark_session, config, repositories: List[str]):
         df = df.withColumn("repo_id", lit(repo_id))
         dfs.append(df)
 
+
     df = dfs[0]
     for other_df in dfs[1:]:
         df = df.union(other_df)
@@ -24,8 +23,6 @@ def get_normalized_df(spark_session, config, repositories: List[str]):
 
     return df
 
-
-
 def process_partition(iterator):
     result = []
 
@@ -33,7 +30,7 @@ def process_partition(iterator):
         record = dict()
 
         assert len(row.lines) >= 5, f'invalid commit: {row.lines}'
-        record['commitHash'] = row.commitHash
+        record['commit_hash'] = row.commit_hash
         record['parent'] = row.lines[1].lstrip('parents: ').strip()
         record['message'] = row.lines[2].lstrip('message: ').strip()
         record['author'] = row.lines[3].lstrip('author: ').strip()
@@ -46,37 +43,59 @@ def process_partition(iterator):
 def get_gitlogs_hdfs_folder(config):
     return f"hdfs://{config.HDFS_HOST}:{config.HDFS_RPC_PORT}{config.HDFS_GITLOGS_PATH}"
 
-def load_gitlog_file(spark_session, config: "config.Config", repo_id: str):
-    df = spark_session.read.text(
-        f"{get_gitlogs_hdfs_folder(config)}/{repo_id}.gitlog"
-    )
-    return df.rdd.zipWithIndex().map(lambda x: (x[0][0], x[1])).toDF(["line", "lineIdx"])
-
 def create_gitlog_rdd(spark_session, config, repo_id):
 
-    gitlogs_df = load_gitlog_file(spark_session, config, repo_id)
+    gitlog = spark_session.read.text(
+        f"{get_gitlogs_hdfs_folder(config)}/{repo_id}.gitlog"
+    )
+
+    gitlog = (gitlog.rdd.zipWithIndex()
+        .map(lambda values_key: (values_key[1], values_key[0][0]))
+        .toDF(["gitlog_line_idx", "gitlog_line"])
+              )
 
     commit_hash_pattern = r"commit: ([a-f0-9]{40})"
-    df_commit_indices = gitlogs_df.withColumn("commitHash", regexp_extract("line", commit_hash_pattern, 1))
-    df_commit_indices = df_commit_indices[df_commit_indices.commitHash != ""]
-    df_commit_indices = df_commit_indices.select("lineIdx", "commitHash")
-    windowSpec = Window.orderBy("lineIdx")
-    df_commit_indices = df_commit_indices.withColumn("nextCommitIdx", lag("lineIdx", -1, default=gitlogs_df.count()).over(windowSpec))
 
-    lines = gitlogs_df.alias("lines")
-    commits = df_commit_indices.alias("commits")
-    join_condition = (F.col("commits.lineIdx") <= F.col("lines.lineIdx")) & (F.col("lines.lineIdx") < F.col("commits.nextCommitIdx"))
-    joined_df = lines.join(commits, join_condition)
-    joined_df = joined_df.select("lines.lineIdx", "commits.commitHash", "lines.line")
-    joined_df = joined_df[joined_df.line != '']
+    commits = gitlog.withColumn("commit_hash", regexp_extract("gitlog_line", commit_hash_pattern, 1))
+    commits = commits[commits.commit_hash != ""]
+    commits = commits.select("gitlog_line_idx", "commit_hash")
+    commits = commits.orderBy("gitlog_line_idx")
 
-    commits = (
-        joined_df
-        .orderBy("commitHash", "lineIdx")
-        .groupBy("commitHash")
-        .agg(F.collect_list("line").alias("lines"))
+    commits = commits.rdd.zipWithIndex().map(
+        lambda values_key: (values_key[1], values_key[0][0], values_key[0][1])).toDF(
+        ["commit_idx", "gitlog_line_idx", 'commit_hash'])
+
+    commits = commits.alias('commits1').join(
+        commits.alias('commits2'),
+        F.col("commits1.commit_idx") == F.col("commits2.commit_idx") - 1,
+        how="left"
+    ).select(
+        col("commits1.gitlog_line_idx").alias('commit_line_idx'),
+        "commits1.commit_hash",
+        col("commits2.gitlog_line_idx").alias("next_commit_line_idx")
     )
-    commits = commits.rdd.mapPartitions(process_partition).toDF()
+
+    join_condition = (F.col("commits.commit_line_idx") <= F.col("gitlog.gitlog_line_idx")) & (
+                F.col("gitlog.gitlog_line_idx") < F.col("commits.next_commit_line_idx"))
+
+    commits_with_gitlog_lines = gitlog.alias('gitlog').join(commits.alias('commits'), join_condition).select(
+        "commit_hash",
+        "gitlog_line",
+        "gitlog_line_idx"
+    )
+
+    commits_with_gitlog_lines = commits_with_gitlog_lines.repartition('commit_hash')
+
+    commits_with_gitlog_lines = commits_with_gitlog_lines[commits_with_gitlog_lines.gitlog_line != '']
+
+    windowSpec = Window.partitionBy("commit_hash").orderBy("gitlog_line_idx")
+
+    commits_with_gitlog_lines_ordered = commits_with_gitlog_lines.withColumn(
+        'lines', F.collect_list('gitlog_line').over(windowSpec)
+    ).groupBy('commit_hash') \
+        .agg(F.max('lines').alias('lines'))
+
+    commits_with_gitlog_lines_ordered = commits_with_gitlog_lines_ordered.rdd.mapPartitions(process_partition).toDF()
 
     output_path = f"{get_gitlogs_hdfs_folder(config)}/{repo_id}"
-    commits.write.mode("overwrite").json(output_path)
+    commits_with_gitlog_lines_ordered.write.mode("overwrite").json(output_path)
