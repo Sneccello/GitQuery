@@ -8,7 +8,7 @@ import streamlit as st
 
 from git_utils import create_gitlog_file, get_repo_id, get_git_repo_link, CloneProgress
 from hdfs_utils import upload_to_hdfs, list_hdfs, get_rdd_folders
-from session_utils import get_config, SessionMetaKeys, get_spark_session
+from session_utils import get_config, get_spark_session, SessionMeta
 from spark_utils import create_gitlog_rdd
 
 
@@ -37,7 +37,7 @@ def display_load_workflow(repo_link: str):
             cloning_progress.progress(progress_obj.progress / 100, text='Cloning Repository...')
         time.sleep(1)
 
-    with st.spinner('Creating Gitlog files...'):
+    with st.spinner('Generating Gitlog file...'):
         output_filename = f"{get_repo_id(repo_link)}.gitlog"
         create_gitlog_file(temp_dir, output_filename)
         subprocess.run(['rm', '-rf', temp_dir_name], check=True)
@@ -48,9 +48,12 @@ def display_load_workflow(repo_link: str):
             output_filename,
             os.path.join(get_config().HDFS_GITLOGS_PATH, output_filename)
         )
+        subprocess.run(['rm', output_filename], check=True)
 
-    with st.spinner('Creating gitlog RDD with PySpark'):
+    with st.spinner('Transforming with Spark...'):
         create_gitlog_rdd(get_spark_session() ,get_config(), get_repo_id(repo_link))
+        refresh_hdfs()
+        st.rerun()
 
 
 def display_add_workflow():
@@ -64,13 +67,20 @@ def display_add_workflow():
     if start_load:
         repo_link = get_git_repo_link(repo_input)
         display_load_workflow(repo_link)
-        st.success("RDD Added")
         refresh_hdfs()
+
         st.rerun()
 
 def refresh_hdfs():
-    res = list_hdfs(get_config(), get_config().HDFS_GITLOGS_PATH)
-    st.session_state[SessionMetaKeys.HDFS_LIST_RESULT] = res
+    old_list = SessionMeta.get_last_hdfs_list_result()
+    new_list = list_hdfs(get_config(), get_config().HDFS_GITLOGS_PATH)
+    SessionMeta.set_last_hdfs_list_result(new_list)
+    new_items = set(new_list) - set(old_list)
+
+    SessionMeta.set_selected_repositories(
+        SessionMeta.get_selected_repositories() + list(new_items)
+    )
+    return new_list
 
 def display_hdfs_list():
     st.title("Loaded Repositories")
@@ -79,7 +89,7 @@ def display_hdfs_list():
         with st.spinner('Refreshing HDFS...'):
             refresh_hdfs()
 
-    rdd_folders = get_rdd_folders(st.session_state[SessionMetaKeys.HDFS_LIST_RESULT])
+    rdd_folders = get_rdd_folders(SessionMeta.get_last_hdfs_list_result())
     config = get_config()
     for rdd_dir in rdd_folders:
         hdfs_url = f"http://localhost:{config.HDFS_HTTP_PORT}/explorer.html#/{config.HDFS_GITLOGS_PATH}/{rdd_dir}"

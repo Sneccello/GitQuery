@@ -1,6 +1,6 @@
 import streamlit as st
-from hdfs_utils import get_rdd_folders, list_hdfs
-from session_utils import get_config, SessionMetaKeys
+from session_utils import SessionMeta
+
 
 def setup():
 
@@ -11,13 +11,7 @@ def setup():
         initial_sidebar_state="expanded",
     )
 
-    if SessionMetaKeys.HDFS_LIST_RESULT not in st.session_state:
-        st.session_state[SessionMetaKeys.HDFS_LIST_RESULT] = list_hdfs(get_config(), get_config().HDFS_GITLOGS_PATH)
-
-    if SessionMetaKeys.SELECTED_REPOSITORIES not in st.session_state:
-        st.session_state[SessionMetaKeys.SELECTED_REPOSITORIES] =\
-            get_rdd_folders(st.session_state[SessionMetaKeys.HDFS_LIST_RESULT])
-
+    SessionMeta.setup()
 
 def main():
 

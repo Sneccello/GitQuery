@@ -1,26 +1,11 @@
-import dataclasses
-import enum
-import json
 import os
 
 import streamlit as st
 from pyspark.sql import SparkSession
 
+from config import Config
+from hdfs_utils import list_hdfs, get_rdd_folders
 
-@dataclasses.dataclass
-class Config:
-    APP_NAME: str
-    SPARK_MASTER: str
-    HDFS_HOST: str
-    HDFS_RPC_PORT: str
-    HDFS_HTTP_PORT: str
-    HDFS_GITLOGS_PATH: str
-
-    @staticmethod
-    def from_json(filepath):
-        with open(filepath, 'r') as f:
-            config_data = json.load(f)
-            return Config(**config_data)
 
 @st.cache_data
 def get_config():
@@ -39,6 +24,34 @@ def get_spark_session():
     return session
 
 
-class SessionMetaKeys(enum.Enum):
-    HDFS_LIST_RESULT = enum.auto()
-    SELECTED_REPOSITORIES = enum.auto()
+class SessionMeta:
+    _HDFS_LIST_RESULT = 'key-hdfs_list_result'
+    _SELECTED_REPOSITORIES = 'key-_hdfs_list_result'
+
+    @staticmethod
+    def setup():
+        SessionMeta.set_last_hdfs_list_result(
+            list_hdfs(get_config(), get_config().HDFS_GITLOGS_PATH)
+        )
+
+        SessionMeta.set_selected_repositories(
+            get_rdd_folders(SessionMeta.get_last_hdfs_list_result())
+        )
+
+
+    @staticmethod
+    def get_last_hdfs_list_result():
+        return st.session_state[SessionMeta._HDFS_LIST_RESULT]
+
+    @staticmethod
+    def set_last_hdfs_list_result(ls):
+        st.session_state[SessionMeta._HDFS_LIST_RESULT] = ls
+
+    @staticmethod
+    def get_selected_repositories():
+        return st.session_state[SessionMeta._SELECTED_REPOSITORIES]
+
+    @staticmethod
+    def set_selected_repositories(repositories):
+        st.session_state[SessionMeta._SELECTED_REPOSITORIES] = get_rdd_folders(repositories)
+
