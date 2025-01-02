@@ -15,7 +15,6 @@ def setup():
         st.session_state[SessionMetaKeys.HDFS_LIST_RESULT] = list_hdfs(get_config(), get_config().HDFS_GITLOGS_PATH)
 
     if SessionMetaKeys.SELECTED_REPOSITORIES not in st.session_state:
-        st.write("rload")
         st.session_state[SessionMetaKeys.SELECTED_REPOSITORIES] =\
             get_rdd_folders(st.session_state[SessionMetaKeys.HDFS_LIST_RESULT])
 
