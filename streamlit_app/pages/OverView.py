@@ -46,7 +46,7 @@ def display_default_plots():
 
 
 def main():
-
+    SessionMeta.setup()
     render_sidebar()
     display_filter()
     display_default_plots()

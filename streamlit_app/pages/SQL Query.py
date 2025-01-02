@@ -51,7 +51,7 @@ def display_editor_space():
 
 def main():
 
-
+    SessionMeta.setup()
     st.title('SQL Editor')
     st.write('_Run SQL commands directly on the Spark Dataframe_')
     display_filter()

@@ -2,6 +2,11 @@ import streamlit as st
 from session_utils import SessionMeta
 
 
+@st.cache_data
+def read_readme_file():
+    with open("README.md", "r") as f:
+        return f.read()
+
 def setup():
 
     st.set_page_config(
@@ -17,9 +22,8 @@ def main():
 
     setup()
 
-    st.write("About")
-
-
+    content = read_readme_file()
+    st.write(content)
 
 if __name__ == '__main__':
     main()

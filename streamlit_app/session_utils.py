@@ -30,13 +30,14 @@ class SessionMeta:
 
     @staticmethod
     def setup():
-        SessionMeta.set_last_hdfs_list_result(
-            list_hdfs(get_config(), get_config().HDFS_GITLOGS_PATH)
-        )
+        if SessionMeta._HDFS_LIST_RESULT not in st.session_state:
+            SessionMeta.set_last_hdfs_list_result(
+                list_hdfs(get_config(), get_config().HDFS_GITLOGS_PATH)
+            )
 
-        SessionMeta.set_selected_repositories(
-            get_rdd_folders(SessionMeta.get_last_hdfs_list_result())
-        )
+            SessionMeta.set_selected_repositories(
+                get_rdd_folders(SessionMeta.get_last_hdfs_list_result())
+            )
 
 
     @staticmethod

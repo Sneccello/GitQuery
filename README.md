@@ -25,14 +25,14 @@ After this Spark (with the app running the driver code) will read
 the file and parse it to a dataframe containing information
 about file changes, author, date, repository etc.
 The RDD is then written back to HDFS next to the other repositories.
-![asd](ingest-diagram.drawio.png)
+![asd](ingest-diag.drawio.svg)
 
 
 
 
 Querying involves reading the ingested git metadata with Spark
 and running queries on the RDD.  The results are then visualized on the app.
-![asd](query-diagram.drawio.png)
+![asd](query-diag.drawio.svg)
 
 
 
