@@ -24,6 +24,13 @@ DEFAULT_QUERY = \
        --where size(parents) > 1
        """
 
+def display_sidebar(dtype_hints):
+    with st.sidebar:
+        st.markdown("<h2 style='color: lightblue;'>Hints ℹ️</h2>", unsafe_allow_html=True)
+        st.markdown(f"<p style='color: lightblue;'>SQL Table name: <em>{TABLE_NAME}</em></p>", unsafe_allow_html=True)
+        with st.expander('Column Datatypes', expanded=False):
+            st.markdown(f"<p style='color: lightblue;'>{dtype_hints}</p>", unsafe_allow_html=True)
+
 def display_editor_space():
 
     if not SessionMeta.get_selected_repositories():
@@ -31,13 +38,14 @@ def display_editor_space():
 
     commits = read_all_records(get_spark_session(), get_config(), SessionMeta.get_selected_repositories())
 
-    commits.createOrReplaceTempView(TABLE_NAME)
-    st.write("## DataFrame Dataframe")
-    st.write(commits.limit(5))
-    with st.expander('Column Datatypes Hints', expanded=False, ):
-        st.write(commits.dtypes)
+    display_sidebar(commits.dtypes)
 
-    st.write('## Your SQL Query')
+    commits.createOrReplaceTempView(TABLE_NAME)
+    st.markdown("<h2 style='color: #89CFF0;'>🌐 DataFrame</h2>", unsafe_allow_html=True)  # Light blue
+    st.write(commits.limit(5))
+
+
+    st.markdown("<h2 style='color: #B39DDB;'>📝 Your SQL Query</h2>", unsafe_allow_html=True)  # Soft lavender
     response = code_editor(
         DEFAULT_QUERY,
         lang="sql",
@@ -45,9 +53,9 @@ def display_editor_space():
         completions=[TABLE_NAME, *COLUMNS.get_values()]
     )
 
-    st.write("_Press CTRL+ENTER to RUN_")
+    st.markdown("<h5 style='color: #B39DDB;'>Press CTRL+ENTER to RUN</h3>", unsafe_allow_html=True)
 
-    st.write('## Query Result')
+    st.markdown("<h2 style='color: #FFB74D;'>📊 Query Result</h2>", unsafe_allow_html=True)  # Muted orange
     if response['type'] == 'submit' or response['type'] == '':  # first run
         query = response['text'] or DEFAULT_QUERY
 
@@ -57,18 +65,37 @@ def display_editor_space():
             try:
                 plan = spark.sql("EXPLAIN FORMATTED " + query).collect()[0].plan
                 plan_str = str(plan)
+
                 highlighted_plan = plan_str.replace("PartitionFilters",
                                                     "<span style='color:red'>PartitionFilters</span>")
+                highlighted_plan = highlighted_plan.replace("ShuffleExchange",
+                                                            "<span style='color:blue'>ShuffleExchange</span>")
+                highlighted_plan = highlighted_plan.replace("BroadcastHashJoin",
+                                                            "<span style='color:green'>BroadcastHashJoin</span>")
+                highlighted_plan = highlighted_plan.replace("Repartition",
+                                                            "<span style='color:orange'>Repartition</span>")
+                highlighted_plan = highlighted_plan.replace("Scan parquet",
+                                                            "<span style='color:#733b73'>Scan parquet</span>")
+                highlighted_plan = highlighted_plan.replace("Filter",
+                                                            "<span style='color:coral'>Filter</span>")
+                highlighted_plan = highlighted_plan.replace("PartitionPruning",
+                                                            "<span style='color:darkcyan'>PartitionPruning</span>")
+                highlighted_plan = highlighted_plan.replace("LocalShuffleReader",
+                                                            "<span style='color:teal'>LocalShuffleReader</span>")
 
+                # Render the highlighted plan
                 st.markdown(highlighted_plan, unsafe_allow_html=True)
             except ParseException as e:
                 st.write("Failed to analyze plan")
                 st.write(e)
                 st.write("Query: \n" + query)
 
-        commits.createOrReplaceTempView("commits")
+        commits.createOrReplaceTempView(TABLE_NAME)
         query_df = spark.sql(query)
         st.write(query_df)
+
+
+
 
 def main():
 

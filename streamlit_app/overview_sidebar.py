@@ -65,7 +65,7 @@ def display_add_workflow():
     )
 
     partition_by = st.selectbox(
-        'Select Column for Spark Partitioning',
+        'Select Column for HDFS Partitioning',
         options=COLUMNS.get_values(),
         index=COLUMNS.get_values().index(COLUMNS.AUTHOR.value)
         )
