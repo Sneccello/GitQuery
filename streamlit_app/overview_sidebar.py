@@ -9,7 +9,7 @@ import streamlit as st
 from git_utils import create_gitlog_file, get_repo_id, get_git_repo_link, CloneProgress
 from hdfs_utils import upload_to_hdfs, list_hdfs, get_rdd_folders
 from session_utils import get_config, get_spark_session, SessionMeta
-from spark_utils import create_gitlog_rdd
+from spark_utils import create_gitlog_rdd, COLUMNS
 
 
 def clone_repo_thread(repo_url, clone_dir, progress_obj):
@@ -19,7 +19,7 @@ def clone_repo_thread(repo_url, clone_dir, progress_obj):
     except Exception as e:
         st.error(f"Error during clone: {e}")
 
-def display_load_workflow(repo_link: str):
+def display_load_workflow(repo_link: str, partition_by: str):
     temp_dir_name = f"temp-dir-{str(hash(repo_link))}"
     temp_dir = os.path.join(os.getcwd(), temp_dir_name)
 
@@ -51,7 +51,7 @@ def display_load_workflow(repo_link: str):
         subprocess.run(['rm', output_filename], check=True)
 
     with st.spinner('Transforming with Spark...'):
-        create_gitlog_rdd(get_spark_session() ,get_config(), get_repo_id(repo_link))
+        create_gitlog_rdd(get_spark_session() ,get_config(), get_repo_id(repo_link), partition_by)
         refresh_hdfs()
         st.rerun()
 
@@ -63,10 +63,17 @@ def display_add_workflow():
         placeholder="https://github.com/Sneccello/WordMaze",
         label_visibility="collapsed"
     )
+
+    partition_by = st.selectbox(
+        'Select Column for Spark Partitioning',
+        options=COLUMNS.get_values(),
+        index=COLUMNS.get_values().index(COLUMNS.AUTHOR.value)
+        )
+
     start_load = st.button("Start Spark Job")
     if start_load:
         repo_link = get_git_repo_link(repo_input)
-        display_load_workflow(repo_link)
+        display_load_workflow(repo_link, partition_by)
         refresh_hdfs()
 
         st.rerun()

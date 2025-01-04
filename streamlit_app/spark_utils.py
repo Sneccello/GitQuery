@@ -1,3 +1,4 @@
+import enum
 from typing import List
 
 from pyspark.sql.functions import regexp_extract, to_timestamp, col, lit
@@ -5,11 +6,24 @@ from pyspark.sql.window import Window
 from pyspark.sql import functions as F
 
 
+class COLUMNS(enum.Enum):
+    AUTHOR = 'author'
+    COMMIT_HASH = 'commit_hash'
+    DATE = 'date'
+    FILES = 'files'
+    MESSAGE = 'message'
+    PARENTS = 'parents'
+
+
+    @staticmethod
+    def get_values():
+        return [c.value for c in COLUMNS]
+
 def get_normalized_df(spark_session, config, repositories: List[str]):
     dfs = []
 
     for repo_id in repositories:
-        df = spark_session.read.json(f"{get_gitlogs_hdfs_folder(config)}/{repo_id}/*.json")
+        df = spark_session.read.parquet(f"{get_gitlogs_hdfs_folder(config)}/{repo_id}/")
         df = df.withColumn("repo_id", lit(repo_id))
         dfs.append(df)
 
@@ -31,7 +45,7 @@ def process_partition(iterator):
 
         assert len(row.lines) >= 5, f'invalid commit: {row.lines}'
         record['commit_hash'] = row.commit_hash
-        record['parent'] = row.lines[1].lstrip('parents: ').strip()
+        record['parents'] = row.lines[1].lstrip('parents: ').strip().split()
         record['message'] = row.lines[2].lstrip('message: ').strip()
         record['author'] = row.lines[3].lstrip('author: ').strip()
         record['date'] = row.lines[4].lstrip('date: ').strip()
@@ -43,7 +57,7 @@ def process_partition(iterator):
 def get_gitlogs_hdfs_folder(config):
     return f"hdfs://{config.HDFS_HOST}:{config.HDFS_RPC_PORT}{config.HDFS_GITLOGS_PATH}"
 
-def create_gitlog_rdd(spark_session, config, repo_id):
+def create_gitlog_rdd(spark_session, config, repo_id, partition_by: str):
 
     gitlog = spark_session.read.text(
         f"{get_gitlogs_hdfs_folder(config)}/{repo_id}.gitlog"
@@ -97,5 +111,8 @@ def create_gitlog_rdd(spark_session, config, repo_id):
 
     commits_with_gitlog_lines_ordered = commits_with_gitlog_lines_ordered.rdd.mapPartitions(process_partition).toDF()
 
+    commits_with_gitlog_lines_ordered = commits_with_gitlog_lines_ordered.select(
+        *COLUMNS.get_values()
+    )
     output_path = f"{get_gitlogs_hdfs_folder(config)}/{repo_id}"
-    commits_with_gitlog_lines_ordered.write.mode("overwrite").json(output_path)
+    commits_with_gitlog_lines_ordered.write.partitionBy(partition_by).mode("overwrite").parquet(output_path)

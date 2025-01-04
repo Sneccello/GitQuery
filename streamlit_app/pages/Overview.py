@@ -1,9 +1,9 @@
 import streamlit as st
 
 from hdfs_utils import get_rdd_folders
-from page_plots import display_commit_activity, display_commits_per_repo, display_commits_per_author, \
+from overview_plots import display_commit_activity, display_commits_per_repo, display_commits_per_author, \
     display_filechanges_per_repo, display_top_contributors
-from page_sidebar import render_sidebar
+from overview_sidebar import render_sidebar
 from session_utils import SessionMeta
 
 
