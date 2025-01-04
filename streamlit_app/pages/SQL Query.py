@@ -5,7 +5,7 @@ from pyspark.shell import spark
 
 from pages.Overview import display_filter
 from session_utils import get_spark_session, get_config, SessionMeta
-from spark_utils import get_normalized_df, COLUMNS
+from spark_utils import read_all_records, COLUMNS
 
 TABLE_NAME = 'commits'
 DEFAULT_QUERY = \
@@ -15,7 +15,7 @@ DEFAULT_QUERY = \
            SELECT author, explode(files) as files FROM commits
        )
        WHERE files.status = 'A'
-       group by author
+       GROUP BY author
        ORDER BY n_created_files DESC
        LIMIT 5;
        
@@ -29,10 +29,10 @@ def display_editor_space():
     if not SessionMeta.get_selected_repositories():
         st.write("##### No data found :( Add and/or Select repositories to visualize!")
 
-    commits = get_normalized_df(get_spark_session(), get_config(), SessionMeta.get_selected_repositories())
+    commits = read_all_records(get_spark_session(), get_config(), SessionMeta.get_selected_repositories())
 
     commits.createOrReplaceTempView(TABLE_NAME)
-    st.write("## Normalized Dataframe")
+    st.write("## DataFrame Dataframe")
     st.write(commits.limit(5))
     with st.expander('Column Datatypes Hints', expanded=False, ):
         st.write(commits.dtypes)
@@ -42,7 +42,6 @@ def display_editor_space():
         DEFAULT_QUERY,
         lang="sql",
         height=len(DEFAULT_QUERY.split('\n')),
-        ghost_text='asda',
         completions=[TABLE_NAME, *COLUMNS.get_values()]
     )
 
@@ -56,7 +55,12 @@ def display_editor_space():
             st.write("Plan:")
             st.write(f"_{response['text']}_")
             try:
-                st.write(spark.sql("EXPLAIN FORMATTED " + query).collect()[0].plan)
+                plan = spark.sql("EXPLAIN FORMATTED " + query).collect()[0].plan
+                plan_str = str(plan)
+                highlighted_plan = plan_str.replace("PartitionFilters",
+                                                    "<span style='color:red'>PartitionFilters</span>")
+
+                st.markdown(highlighted_plan, unsafe_allow_html=True)
             except ParseException as e:
                 st.write("Failed to analyze plan")
                 st.write(e)
