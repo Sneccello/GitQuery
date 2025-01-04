@@ -14,7 +14,6 @@ from spark_utils import create_gitlog_rdd, COLUMNS
 
 def clone_repo_thread(repo_url, clone_dir, progress_obj):
     try:
-        # Clone the repository with the CloneProgress object
         git.Repo.clone_from(repo_url, clone_dir, progress=progress_obj)
     except Exception as e:
         st.error(f"Error during clone: {e}")
@@ -57,7 +56,7 @@ def display_load_workflow(repo_link: str, partition_by: str):
 
 
 def display_add_workflow():
-    st.title("Load Repository")
+    st.markdown("<h2 style='color:#8e44ad;'>📥 Load Repository</h2>", unsafe_allow_html=True)
     repo_input = st.text_input(
         "Load Repository",
         placeholder="https://github.com/Sneccello/WordMaze",
@@ -65,12 +64,12 @@ def display_add_workflow():
     )
 
     partition_by = st.selectbox(
-        'Select Column for HDFS Partitioning',
+        '🔧 Select Column for HDFS Partitioning',
         options=COLUMNS.get_values(),
         index=COLUMNS.get_values().index(COLUMNS.AUTHOR.value)
         )
 
-    start_load = st.button("Start Spark Job")
+    start_load = st.button("🚀 Start Spark Job")
     if start_load:
         repo_link = get_git_repo_link(repo_input)
         display_load_workflow(repo_link, partition_by)
@@ -90,8 +89,8 @@ def refresh_hdfs():
     return new_list
 
 def display_hdfs_list():
-    st.title("Loaded Repositories")
-    refresh = st.button("Refresh HDFS")
+    st.markdown("<h2 style='color:#3498db;'>📂 Loaded Repositories</h2>", unsafe_allow_html=True)
+    refresh = st.button("🔄 Refresh HDFS")
     if refresh:
         with st.spinner('Refreshing HDFS...'):
             refresh_hdfs()
