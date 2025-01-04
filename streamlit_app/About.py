@@ -1,6 +1,16 @@
+import re
 import streamlit as st
 from session_utils import SessionMeta
 
+def display_markdown_with_images(markdown_string):
+    parts = re.split(r"!\[(.*?)\]\((.*?)\)", markdown_string)
+    for i, part in enumerate(parts):
+        if i % 3 == 0:
+            st.markdown(part)
+        elif i % 3 == 1:
+            title = part
+        else:
+            st.image(part)
 
 @st.cache_data
 def read_readme_file():
@@ -18,12 +28,13 @@ def setup():
 
     SessionMeta.setup()
 
+
+
 def main():
 
     setup()
-
     content = read_readme_file()
-    st.write(content)
+    display_markdown_with_images(content)
 
 if __name__ == '__main__':
     main()
