@@ -19,7 +19,7 @@ class COLUMNS(enum.Enum):
     def get_values():
         return [c.value for c in COLUMNS]
 
-def get_normalized_df(spark_session, config, repositories: List[str]):
+def read_all_records(spark_session, config, repositories: List[str]):
     dfs = []
 
     for repo_id in repositories:
