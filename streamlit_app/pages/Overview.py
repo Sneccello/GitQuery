@@ -2,7 +2,7 @@ import streamlit as st
 
 from hdfs_utils import get_rdd_folders
 from overview_plots import display_commit_activity, display_commits_per_repo, display_commits_per_author, \
-    display_filechanges_per_repo, display_top_contributors
+    display_filechanges_per_repo, file_status_heatmap
 from overview_sidebar import render_sidebar
 from session_utils import SessionMeta
 
@@ -35,14 +35,12 @@ def display_default_plots():
 
     col1, _,  col2 = st.columns([10, 1, 10])
 
-
-    with st.spinner('Querying with spark and generating plots...'):
-        with col1:
-            display_commits_per_author()
-            display_filechanges_per_repo()
-        with col2:
-            display_commits_per_repo()
-            display_top_contributors()
+    with col1:
+        display_commits_per_author()
+        display_filechanges_per_repo()
+    with col2:
+        display_commits_per_repo()
+        file_status_heatmap()
 
 
 def main():

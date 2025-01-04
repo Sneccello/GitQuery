@@ -10,9 +10,6 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 
-COPY README.md /app/README.md
-COPY ingest-diagram.drawio.png /app/ingest-diagram.drawio.png
-COPY query-diagram.drawio.png /app/query-diagram.drawio.png
 COPY streamlit_app/requirements.txt /app/requirements.txt
 
 WORKDIR /app

@@ -89,7 +89,6 @@ services:
 
   spark-worker:
     image: bitnami/spark:latest
-    container_name: spark-worker
     restart: always
     environment:
       - SPARK_MODE=worker

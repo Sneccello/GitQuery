@@ -1,3 +1,5 @@
+import json
+
 import streamlit as st
 from code_editor import code_editor
 from pyspark.errors import ParseException
@@ -28,8 +30,8 @@ def display_sidebar(dtype_hints):
     with st.sidebar:
         st.markdown("<h2 style='color: lightblue;'>Hints ℹ️</h2>", unsafe_allow_html=True)
         st.markdown(f"<p style='color: lightblue;'>SQL Table name: <em>{TABLE_NAME}</em></p>", unsafe_allow_html=True)
-        with st.expander('Column Datatypes', expanded=False):
-            st.markdown(f"<p style='color: lightblue;'>{dtype_hints}</p>", unsafe_allow_html=True)
+        with st.expander('Column Datatypes', expanded=True):
+            st.write(dtype_hints)
 
 def display_editor_space():
 
@@ -37,7 +39,6 @@ def display_editor_space():
         st.write("##### No data found :( Add and/or Select repositories to visualize!")
 
     commits = read_all_records(get_spark_session(), get_config(), SessionMeta.get_selected_repositories())
-
     display_sidebar(commits.dtypes)
 
     commits.createOrReplaceTempView(TABLE_NAME)
