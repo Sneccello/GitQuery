@@ -37,6 +37,7 @@ def display_editor_space():
 
     if not SessionMeta.get_selected_repositories():
         st.write("##### No data found :( Add and/or Select repositories to visualize!")
+        return
 
     commits = read_all_records(get_spark_session(), get_config(), SessionMeta.get_selected_repositories())
     display_sidebar(commits.dtypes)
