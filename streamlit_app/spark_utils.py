@@ -23,7 +23,8 @@ def read_all_records(spark_session, config, repositories: List[str]):
     dfs = []
 
     for repo_id in repositories:
-        df = spark_session.read.parquet(f"{get_gitlogs_hdfs_folder(config)}/{repo_id}/")
+        df = (spark_session.read.parquet(f"{get_gitlogs_hdfs_folder(config)}/{repo_id}/").
+              select(*COLUMNS.get_values()))
         df = df.withColumn("repo_id", lit(repo_id))
         dfs.append(df)
 
