@@ -39,7 +39,7 @@ def display_load_workflow(repo_link: str, partition_by: str):
     with st.spinner('Generating Gitlog file...'):
         output_filename = f"{get_repo_id(repo_link)}.gitlog"
         create_gitlog_file(temp_dir, output_filename)
-        subprocess.run(['rm', '-rf', temp_dir_name], check=True)
+        subprocess.run(['rm', '-rf', f'"{temp_dir_name}"'], check=True)
 
     with st.spinner('Uploading Gitlog to HDFS...'):
         upload_to_hdfs(
