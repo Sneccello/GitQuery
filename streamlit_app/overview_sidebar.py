@@ -19,8 +19,8 @@ def clone_repo_thread(repo_url, clone_dir, progress_obj):
         st.error(f"Error during clone: {e}")
 
 def display_load_workflow(repo_link: str, partition_by: str):
-    temp_dir_name = f"temp-dir-{str(hash(repo_link))}"
-    temp_dir = os.path.join(os.getcwd(), temp_dir_name)
+    temp_dir_name = f"temp-dir-{str(hash(repo_link))}-{time.time()}"
+    temp_dir = os.path.join('/tmp/RepoCompare/', temp_dir_name)
 
     cloning_progress = st.progress(0, text='Cloning Repository...')
 
@@ -37,17 +37,17 @@ def display_load_workflow(repo_link: str, partition_by: str):
         time.sleep(1)
 
     with st.spinner('Generating Gitlog file...'):
-        output_filename = f"{get_repo_id(repo_link)}.gitlog"
-        create_gitlog_file(temp_dir, output_filename)
-        subprocess.run(['rm', '-rf', f'"{temp_dir_name}"'], check=True)
+        output_filepath = f"{get_repo_id(repo_link)}.gitlog"
+        create_gitlog_file(temp_dir, output_filepath)
+        subprocess.run(['rm', '-rf', f'"{temp_dir}"'], check=True)
 
     with st.spinner('Uploading Gitlog to HDFS...'):
         upload_to_hdfs(
             get_config(),
-            output_filename,
-            os.path.join(get_config().HDFS_GITLOGS_PATH, output_filename)
+            output_filepath,
+            os.path.join(get_config().HDFS_GITLOGS_PATH, output_filepath)
         )
-        subprocess.run(['rm', output_filename], check=True)
+        subprocess.run(['rm', output_filepath], check=True)
 
     with st.spinner('Transforming with Spark...'):
         create_gitlog_rdd(get_spark_session() ,get_config(), get_repo_id(repo_link), partition_by)

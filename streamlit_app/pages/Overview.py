@@ -7,8 +7,6 @@ from overview_sidebar import render_sidebar
 from session_utils import SessionMeta
 
 
-#TODO 24/12/31 13:23:09 WARN WindowExec: No Partition Defined for Window operation! Moving all data to a single partition, this can cause serious performance degradation.
-
 def display_filter():
 
     available_folders = get_rdd_folders(SessionMeta.get_last_hdfs_list_result())

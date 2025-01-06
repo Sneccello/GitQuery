@@ -11,6 +11,7 @@ def display_commits_per_author():
     df = read_all_records(get_spark_session(), get_config(), SessionMeta.get_selected_repositories())
     df = df.groupby('author').count()
     fig = px.pie(df, names='author', values='count', title='Commits Per Author')
+    fig.update_traces(textinfo='none')
     st.plotly_chart(fig)
 
 def display_commits_per_repo():
@@ -55,15 +56,18 @@ def file_status_heatmap():
 
     abs_counts.set_index('repo_id', inplace=True)
     percentages = abs_counts.div(abs_counts.sum(axis=1), axis=0) * 100
-
-    fig = go.Figure(data=go.Heatmap(
-        z=percentages,
-        y=percentages.index,
-        x=percentages.columns.map(lambda c: STATUSES[c]),
-        text=abs_counts,
-        texttemplate="%{text}",
-        textfont={"size": 20}),
-        layout={'title':"File Status Changes"}
+    percentages = percentages[list(STATUSES.keys())]
+    fig = go.Figure(
+        data=go.Heatmap(
+            z=percentages,
+            y=percentages.index,
+            x=percentages.columns.map(lambda c: STATUSES[c.upper()]),
+            text=abs_counts,
+            texttemplate="%{text}",
+            textfont={"size": 20},
+            colorbar={"title": 'Row-wise %'}
+        ),
+        layout={'title':"File Status Changes"},
     )
 
     st.plotly_chart(fig)

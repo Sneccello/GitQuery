@@ -1,4 +1,6 @@
 import subprocess
+
+import git
 from git import RemoteProgress
 
 class CloneProgress(RemoteProgress):
@@ -24,15 +26,19 @@ def get_git_repo_link(repo_or_gitfile: str):
 
 
 def create_gitlog_file(repo_dir: str, output_path: str):
+    repo = git.Repo(repo_dir)
+    try:
+        repo.git.checkout('main')
+    except:
+        repo.git.checkout('master')
 
     git_log_command = [
         'git', 'log', '--name-status',
         '--pretty=format:commit: %H%nparents: %P%nmessage: %s%nauthor: %ae%ndate: %ad',
         '--date=iso'
     ]
-
     with open(output_path, 'w') as output_file:
-        subprocess.run(git_log_command, cwd=repo_dir, stdout=output_file, check=True)
+        subprocess.run(git_log_command, cwd=repo_dir, stderr=output_file, stdout=output_file, check=True)
 
 
 
