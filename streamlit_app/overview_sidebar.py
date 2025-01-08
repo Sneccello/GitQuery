@@ -78,9 +78,9 @@ def display_add_workflow():
         st.rerun()
 
 def refresh_hdfs():
-    old_list = SessionMeta.get_last_hdfs_list_result()
+    old_list = SessionMeta.get_last_hdfs_repo_list_result()
     new_list = list_hdfs(get_config(), get_config().HDFS_GITLOGS_PATH)
-    SessionMeta.set_last_hdfs_list_result(new_list)
+    SessionMeta.set_last_hdfs_repo_list_result(new_list)
     new_items = set(new_list) - set(old_list)
 
     SessionMeta.set_selected_repositories(
@@ -95,7 +95,7 @@ def display_hdfs_list():
         with st.spinner('Refreshing HDFS...'):
             refresh_hdfs()
 
-    rdd_folders = get_rdd_folders(SessionMeta.get_last_hdfs_list_result())
+    rdd_folders = get_rdd_folders(SessionMeta.get_last_hdfs_repo_list_result())
     config = get_config()
     for rdd_dir in rdd_folders:
         hdfs_url = f"http://localhost:{config.HDFS_HTTP_PORT}/explorer.html#/{config.HDFS_GITLOGS_PATH}/{rdd_dir}"
