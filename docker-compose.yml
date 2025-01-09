@@ -94,6 +94,7 @@ services:
     restart: always
     ports:
       - 8501:8501
+      - 4040:4040
     environment:
       - PYTHON_VERSION=3.12
     volumes:
