@@ -26,22 +26,11 @@ def display_explain_query():
 
             highlighted_plan = plan_str.replace("PartitionFilters",
                                                 "<span style='color:red'>PartitionFilters</span>")
-            highlighted_plan = highlighted_plan.replace("ShuffleExchange",
-                                                        "<span style='color:blue'>ShuffleExchange</span>")
-            highlighted_plan = highlighted_plan.replace("BroadcastHashJoin",
-                                                        "<span style='color:green'>BroadcastHashJoin</span>")
-            highlighted_plan = highlighted_plan.replace("Repartition",
-                                                        "<span style='color:orange'>Repartition</span>")
+            highlighted_plan = highlighted_plan.replace("Exchange",
+                                                        "<span style='color:#f54290'>ShuffleExchange</span>")
             highlighted_plan = highlighted_plan.replace("Scan parquet",
                                                         "<span style='color:#733b73'>Scan parquet</span>")
-            highlighted_plan = highlighted_plan.replace("Filter",
-                                                        "<span style='color:coral'>Filter</span>")
-            highlighted_plan = highlighted_plan.replace("PartitionPruning",
-                                                        "<span style='color:darkcyan'>PartitionPruning</span>")
-            highlighted_plan = highlighted_plan.replace("LocalShuffleReader",
-                                                        "<span style='color:teal'>LocalShuffleReader</span>")
 
-            # Render the highlighted plan
             st.markdown(highlighted_plan, unsafe_allow_html=True)
         except ParseException as e:
             st.write("Failed to analyze plan")

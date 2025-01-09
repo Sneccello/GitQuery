@@ -90,7 +90,6 @@ class SessionMeta:
     @staticmethod
     def set_user_sql_query(query: str):
         st.session_state[SessionMeta._USER_SQL_QUERY] = query
-    #TODO KeyError: "None of ['repo_id'] are in the columns"
 
     @staticmethod
     def set_user_sql_result(df: pd.DataFrame):

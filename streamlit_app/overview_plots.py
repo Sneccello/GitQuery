@@ -1,3 +1,4 @@
+import pandas as pd
 import streamlit as st
 from session_utils import SessionMeta, get_spark_session, get_config, QueryNames
 from spark_utils import read_all_records
@@ -20,7 +21,17 @@ def refresh_commits_per_author():
 
 def display_commits_per_author():
     df = SessionMeta.get_query_results(QueryNames.COMMITS_PER_AUTHOR)
-    fig = px.pie(df, names='author', values='count', title='Commits Per Author')
+
+    df_sorted = df.sort_values(by='count', ascending=False)
+    TOP_N = 20
+    top_authors = df_sorted.head(TOP_N)
+
+    other_authors = df_sorted.tail(len(df_sorted) - TOP_N)
+    other_commits = other_authors['count'].sum()
+    new_row = pd.DataFrame([{'author': 'Other', 'count': other_commits}])
+    top_authors = pd.concat([top_authors, new_row])
+
+    fig = px.pie(top_authors, names='author', values='count', title='Commits Per Author')
     fig.update_traces(textinfo='none')
     st.plotly_chart(fig)
 
@@ -70,8 +81,7 @@ def refresh_file_status_counts():
 def display_file_status_counts():
 
     abs_counts = SessionMeta.get_query_results(QueryNames.FILE_STATUS_COUNTS)
-
-    abs_counts.set_index('repo_id', inplace=True)
+    abs_counts = abs_counts.set_index('repo_id')
     percentages = abs_counts.div(abs_counts.sum(axis=1), axis=0) * 100
     percentages = percentages[list(STATUSES.keys())]
     fig = go.Figure(

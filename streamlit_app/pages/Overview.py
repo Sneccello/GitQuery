@@ -33,12 +33,14 @@ def display_filter():
             refresh_file_changes_per_commit,
             refresh_file_status_counts
         ]
-        query_pbar = st.progress(0, text='Querying with Spark..')
+        QUERYING_WITH_SPARK = "Querying with Spark.. (See Jobs at [http://localhost:4040](http://localhost:4040))"
+
+        query_pbar = st.progress(0, text=QUERYING_WITH_SPARK)
         n_refresh = len(refresh_functions)
         for idx, fn in enumerate(refresh_functions):
             fn()
             percentage = (idx+1) / n_refresh
-            query_pbar.progress(percentage, text='Querying with Spark..')
+            query_pbar.progress(percentage, text=QUERYING_WITH_SPARK)
         query_pbar.progress(100, text='Querying with Spark done!')
         st.rerun()
 
