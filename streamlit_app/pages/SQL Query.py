@@ -38,7 +38,7 @@ def display_explain_query():
             st.write("Query: \n" + query)
 
 def display_query_results(query):
-    with st.spinner('Running query...'):
+    with st.spinner('Running query...(See Jobs at [http://localhost:4040](http://localhost:4040)'):
         SessionMeta.set_user_sql_query(query)
         result_df = spark.sql(query)
         SessionMeta.set_user_sql_result(result_df.toPandas())
