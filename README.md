@@ -1,5 +1,7 @@
 # GitQuery
 
+![screenshot_overview.png](screenshot_overview.png)
+
 ## About
 This tool allows users to compare statistics about repositories and query
 data about contributors across repositories. 
@@ -7,6 +9,8 @@ You can ingest git repositories and make
 queries like "Who created the most files in all repositories"
 or "Which repository has the most deleted files".
 Data is uploaded to HDFS and queries are made with Spark, all containerized with Docker.
+
+## Features
 
 
 ## Quickstart
@@ -17,11 +21,13 @@ docker compose up [--scale spark-worker={#desiredWorkers}]
 This will launch 
 - HDFS containers
   - datanode
-  - namenode with WebUI on [http://localhost:9870](http://localhost:9870)
+  - namenode with UI on [http://localhost:9870](http://localhost:9870)
 - Spark containers
-  - Spark Master with WebUI on [http://localhost:9870](http://localhost:9870)
+  - Spark Master with UI on [http://localhost:8080](http://localhost:8080)
   - Spark workers (scaled with the command above)
-- The streamlit app to interact on [http://localhost:8501](http://localhost:8501)
+- The streamlit app to 
+  - interact on [http://localhost:8501](http://localhost:8501)
+  - see the spark driver UI on [http://localhost:4040](http://localhost:4040) when a job is running
 - A jupyter notebook environment in the docker network for free interaction on
 [http://localhost:8888](http://localhost:8888)
 
