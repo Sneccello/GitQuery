@@ -58,8 +58,8 @@ def display_default_plots():
         display_commits_per_author()
         display_file_changes_per_commit()
     with col2:
-        display_commits_per_repo()
         display_file_status_counts()
+        display_commits_per_repo()
 
 
 def main():
