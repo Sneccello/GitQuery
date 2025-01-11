@@ -10,6 +10,7 @@ class Config:
     HDFS_RPC_PORT: str
     HDFS_HTTP_PORT: str
     HDFS_GITLOGS_PATH: str
+    HDFS_SPARK_OUTPUT_ROOT: str
 
     @staticmethod
     def from_json(filepath):

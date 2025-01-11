@@ -1,3 +1,4 @@
+import datetime
 import enum
 from typing import List
 
@@ -10,9 +11,11 @@ class COLUMNS(enum.Enum):
     AUTHOR = 'author'
     COMMIT_HASH = 'commit_hash'
     DATE = 'date'
+    TIMESTAMP = 'timestamp'
     FILES = 'files'
     MESSAGE = 'message'
     PARENTS = 'parents'
+    REPO_ID = 'repo_id'
 
 
     @staticmethod
@@ -20,21 +23,16 @@ class COLUMNS(enum.Enum):
         return [c.value for c in COLUMNS]
 
 def read_all_records(spark_session, config, repositories: List[str]):
-    dfs = []
 
-    for repo_id in repositories:
-        df = (spark_session.read.parquet(f"{get_gitlogs_hdfs_folder(config)}/{repo_id}/").
-              select(*COLUMNS.get_values()))
-        df = df.withColumn("repo_id", lit(repo_id))
-        dfs.append(df)
+    df = spark_session.read.parquet(get_output_root_folder(config))
 
+    df = df.filter(df.repo_id.isin(repositories))
 
-    df = dfs[0]
-    for other_df in dfs[1:]:
-        df = df.union(other_df)
+    df = df.withColumn("date",
+                       to_timestamp(F.concat_ws(" ", df["date"], df["timestamp"]), "yyyy-MM-dd HH:mm:ssZ")
+                       )
 
-    df = df.withColumn("date", to_timestamp(col("date"), "yyyy-MM-dd HH:mm:ss Z"))
-    df = df.withColumn("year_month", F.date_format("date", "yyyy-MM"))
+    df.drop('timestamp')
 
     return df
 
@@ -49,7 +47,14 @@ def process_partition(iterator):
         record['parents'] = row.lines[1].lstrip('parents: ').strip().split()
         record['message'] = row.lines[2].lstrip('message: ').strip()
         record['author'] = row.lines[3].lstrip('author: ').strip()
-        record['date'] = row.lines[4].lstrip('date: ').strip()
+
+        iso_date = row.lines[4].lstrip('date: ').strip()
+        dt = datetime.datetime.fromisoformat(iso_date)
+        day = dt.strftime('%Y-%m-%d')
+        timestamp = dt.strftime('%H:%M:%S%z')
+        record['date'] = day
+        record['timestamp'] = timestamp
+
         record['files'] = [{'status': f.strip()[0], 'filename': f[1:].strip()} for f in row.lines[5:]]
         result.append(record)
     return result
@@ -57,6 +62,9 @@ def process_partition(iterator):
 
 def get_gitlogs_hdfs_folder(config):
     return f"hdfs://{config.HDFS_HOST}:{config.HDFS_RPC_PORT}{config.HDFS_GITLOGS_PATH}"
+
+def get_output_root_folder(config):
+    return f"hdfs://{config.HDFS_HOST}:{config.HDFS_RPC_PORT}{config.HDFS_SPARK_OUTPUT_ROOT}/"
 
 def create_gitlog_rdd(spark_session, config, repo_id, partition_by: str):
 
@@ -112,8 +120,13 @@ def create_gitlog_rdd(spark_session, config, repo_id, partition_by: str):
 
     commits_with_gitlog_lines_ordered = commits_with_gitlog_lines_ordered.rdd.mapPartitions(process_partition).toDF()
 
+    commits_with_gitlog_lines_ordered = commits_with_gitlog_lines_ordered.withColumn("repo_id", lit(repo_id))
     commits_with_gitlog_lines_ordered = commits_with_gitlog_lines_ordered.select(
         *COLUMNS.get_values()
     )
-    output_path = f"{get_gitlogs_hdfs_folder(config)}/{repo_id}"
-    commits_with_gitlog_lines_ordered.write.partitionBy(partition_by).mode("overwrite").parquet(output_path)
+
+    (commits_with_gitlog_lines_ordered
+     .write
+     .partitionBy(COLUMNS.REPO_ID.value, partition_by)
+     .mode("overwrite")
+     .parquet(get_output_root_folder(config)))

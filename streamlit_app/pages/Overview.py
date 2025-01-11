@@ -1,21 +1,21 @@
 import streamlit as st
 
-from hdfs_utils import get_rdd_folders
+from hdfs_utils import filter_for_repo_folders
 from overview_plots import display_commit_activity, display_commits_per_repo, display_commits_per_author, \
     display_file_changes_per_commit, display_file_status_counts, refresh_commits_per_author, refresh_commit_activity, \
     refresh_file_status_counts, refresh_file_changes_per_commit, refresh_commits_per_repo
 from overview_sidebar import render_sidebar
-from session_utils import SessionMeta
+from session_utils import SessionMeta, spark_repo_partition_to_repo_id
 
 
 def display_filter():
 
-    available_folders = get_rdd_folders(SessionMeta.get_last_hdfs_repo_list_result())
+    available_repos = spark_repo_partition_to_repo_id(SessionMeta.get_last_hdfs_repo_list_result())
 
     st.write("## Select Repositories To Analyze")
     options = st.multiselect(
         "What Repositories You Would like to Analyze?",
-        available_folders,
+        available_repos,
         SessionMeta.get_selected_repositories(),
         label_visibility="collapsed"
     )
@@ -46,10 +46,6 @@ def display_filter():
 
 def display_default_plots():
 
-    if not SessionMeta.all_plots_available():
-        st.write("##### No data found :( Add repositories to visualize and refresh!")
-        return
-
     display_commit_activity()
 
     col1, _,  col2 = st.columns([10, 1, 10])
@@ -65,6 +61,9 @@ def display_default_plots():
 def main():
     SessionMeta.setup()
     render_sidebar()
+    if not SessionMeta.get_selected_repositories():
+        st.write("##### No data found :( Add repositories to visualize and refresh!")
+        return
     display_filter()
     display_default_plots()
 

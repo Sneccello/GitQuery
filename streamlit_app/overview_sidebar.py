@@ -7,8 +7,8 @@ import git
 import streamlit as st
 
 from git_utils import create_gitlog_file, get_repo_id, get_git_repo_link, CloneProgress
-from hdfs_utils import upload_to_hdfs, list_hdfs, get_rdd_folders
-from session_utils import get_config, get_spark_session, SessionMeta
+from hdfs_utils import upload_to_hdfs, list_hdfs, filter_for_repo_folders
+from session_utils import get_config, get_spark_session, SessionMeta, spark_repo_partition_to_repo_id
 from spark_utils import create_gitlog_rdd, COLUMNS
 
 
@@ -65,8 +65,8 @@ def display_add_workflow():
 
     partition_by = st.selectbox(
         '🔧 Select Column for HDFS Partitioning',
-        options=COLUMNS.get_values(),
-        index=COLUMNS.get_values().index(COLUMNS.AUTHOR.value)
+        options=[COLUMNS.AUTHOR.value, COLUMNS.DATE.value],
+        index=0
         )
 
     start_load = st.button("🚀 Start Spark Job")
@@ -78,13 +78,13 @@ def display_add_workflow():
         st.rerun()
 
 def refresh_hdfs():
-    old_list = SessionMeta.get_last_hdfs_repo_list_result()
-    new_list = list_hdfs(get_config(), get_config().HDFS_GITLOGS_PATH)
+
+    new_list = list_hdfs(get_config(), get_config().HDFS_SPARK_OUTPUT_ROOT)
+
     SessionMeta.set_last_hdfs_repo_list_result(new_list)
-    new_items = set(new_list) - set(old_list)
 
     SessionMeta.set_selected_repositories(
-        SessionMeta.get_selected_repositories() + list(new_items)
+        list(set(new_list + SessionMeta.get_selected_repositories()))
     )
     return new_list
 
@@ -95,9 +95,9 @@ def display_hdfs_list():
         with st.spinner('Refreshing HDFS...'):
             refresh_hdfs()
 
-    rdd_folders = get_rdd_folders(SessionMeta.get_last_hdfs_repo_list_result())
+    repo_names = spark_repo_partition_to_repo_id(SessionMeta.get_last_hdfs_repo_list_result())
     config = get_config()
-    for rdd_dir in rdd_folders:
+    for rdd_dir in repo_names:
         hdfs_url = f"http://localhost:{config.HDFS_HTTP_PORT}/explorer.html#/{config.HDFS_GITLOGS_PATH}/{rdd_dir}"
         st.markdown(f"[{rdd_dir}]({hdfs_url})")
 

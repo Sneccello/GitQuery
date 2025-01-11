@@ -47,12 +47,12 @@ def display_commits_per_repo():
 
 def refresh_commit_activity():
     df = read_all_records(get_spark_session(), get_config(), SessionMeta.get_selected_repositories())
-    df = df.groupBy("repo_id", "year_month").count().orderBy("year_month").toPandas()
+    df = df.withColumn("date", F.to_date("date")).groupBy("repo_id", "date").count().orderBy("date").toPandas()
     SessionMeta.set_query_results(QueryNames.COMMIT_ACTIVITY, df)
 
 def display_commit_activity():
     df = SessionMeta.get_query_results(QueryNames.COMMIT_ACTIVITY)
-    fig = px.line(df, x='year_month', y='count', color='repo_id', title='Commits Over Time')
+    fig = px.line(df, x='date', y='count', color='repo_id', title='Commits Over Time')
     st.plotly_chart(fig)
 
 def refresh_file_changes_per_commit():

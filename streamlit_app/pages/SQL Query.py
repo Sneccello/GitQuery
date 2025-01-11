@@ -47,7 +47,7 @@ def display_query_results(query):
 
 def refresh_spark_table():
     with st.spinner('Reading HDFS into Spark Dataframe...'):
-        commits = read_all_records(get_spark_session(), get_config(), SessionMeta.get_last_hdfs_repo_list_result())
+        commits = read_all_records(get_spark_session(), get_config(), SessionMeta.get_selected_repositories())
         commits.createOrReplaceTempView(UER_SQL_TABLE_NAME)
         SessionMeta.set_spark_table_dtypes(commits.dtypes)
         SessionMeta.set_spark_table_sample(commits.limit(5).toPandas())

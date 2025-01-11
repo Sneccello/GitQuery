@@ -1,5 +1,7 @@
 import enum
 import os
+import re
+from token import COLON
 from typing import Optional, List
 
 import pandas as pd
@@ -8,7 +10,8 @@ from pyspark.sql import SparkSession
 
 from config import Config
 from consts import DEFAULT_SQL_QUERY
-from hdfs_utils import list_hdfs, get_rdd_folders
+from hdfs_utils import list_hdfs, filter_for_repo_folders
+from spark_utils import COLUMNS
 
 
 @st.cache_data
@@ -37,7 +40,7 @@ class QueryNames(enum.Enum):
 
 class SessionMeta:
     _HDFS_LIST_REPO_RESULT = 'key-hdfs_list_result'
-    _SELECTED_REPOSITORIES = 'key-_hdfs_list_result'
+    _SELECTED_REPOSITORIES = 'key-selected_repositories'
     _QUERY_RESULTS = 'key-query_results'
     _USER_SQL_TABLE_SAMPLE = 'key-user_table_sample'
     _USER_SQL_TABLE_DTYPES = 'key-user_table_dtypes'
@@ -48,17 +51,16 @@ class SessionMeta:
     def setup():
         if SessionMeta._HDFS_LIST_REPO_RESULT not in st.session_state:
             SessionMeta.set_last_hdfs_repo_list_result(
-                list_hdfs(get_config(), get_config().HDFS_GITLOGS_PATH)
+                list_hdfs(get_config(), get_config().HDFS_SPARK_OUTPUT_ROOT)
             )
 
             SessionMeta.set_selected_repositories(
-                get_rdd_folders(SessionMeta.get_last_hdfs_repo_list_result())
+                SessionMeta.get_last_hdfs_repo_list_result()
             )
 
             st.session_state[SessionMeta._QUERY_RESULTS] = dict()
 
             st.session_state[SessionMeta._USER_SQL_QUERY] = DEFAULT_SQL_QUERY
-
 
 
     @staticmethod
@@ -67,15 +69,16 @@ class SessionMeta:
 
     @staticmethod
     def set_last_hdfs_repo_list_result(ls):
-        st.session_state[SessionMeta._HDFS_LIST_REPO_RESULT] = get_rdd_folders(ls)
+        st.session_state[SessionMeta._HDFS_LIST_REPO_RESULT] = ls
 
     @staticmethod
     def get_selected_repositories():
-        return st.session_state[SessionMeta._SELECTED_REPOSITORIES]
+        return st.session_state.get(SessionMeta._SELECTED_REPOSITORIES, [])
 
     @staticmethod
-    def set_selected_repositories(repositories):
-        st.session_state[SessionMeta._SELECTED_REPOSITORIES] = get_rdd_folders(repositories)
+    def set_selected_repositories(hdfs_partitions):
+        folders = spark_repo_partition_to_repo_id(hdfs_partitions)
+        st.session_state[SessionMeta._SELECTED_REPOSITORIES] = folders
 
     @staticmethod
     def set_query_results(query_name: QueryNames, result: pd.DataFrame):
@@ -120,3 +123,7 @@ class SessionMeta:
     @staticmethod
     def set_spark_table_dtypes(df: pd.DataFrame):
         st.session_state[SessionMeta._USER_SQL_TABLE_DTYPES] = df
+
+def spark_repo_partition_to_repo_id(hdfs_partitions):
+    folders = filter_for_repo_folders(hdfs_partitions)
+    return[re.match(f'{COLUMNS.REPO_ID.value}=(.*)', folder)[1] for folder in folders]
