@@ -11,7 +11,7 @@ DEFAULT_SQL_QUERY = \
    ORDER BY n_created_files DESC
    LIMIT 5;
 
-   -- Select Merge commits
+   ----Select Merge commits
    --SELECT * from commits
-   --where size(parents) > 1
+   --WHERE size(parents) > 1
    """
