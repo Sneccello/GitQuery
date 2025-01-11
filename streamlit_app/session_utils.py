@@ -1,6 +1,6 @@
 import enum
 import os
-from typing import Optional
+from typing import Optional, List
 
 import pandas as pd
 import streamlit as st
@@ -39,6 +39,8 @@ class SessionMeta:
     _HDFS_LIST_REPO_RESULT = 'key-hdfs_list_result'
     _SELECTED_REPOSITORIES = 'key-_hdfs_list_result'
     _QUERY_RESULTS = 'key-query_results'
+    _USER_SQL_TABLE_SAMPLE = 'key-user_table_sample'
+    _USER_SQL_TABLE_DTYPES = 'key-user_table_dtypes'
     _USER_SQL_QUERY = 'key-sql_query'
     _USER_SQL_RESULT = 'key-sql_result'
 
@@ -56,7 +58,7 @@ class SessionMeta:
             st.session_state[SessionMeta._QUERY_RESULTS] = dict()
 
             st.session_state[SessionMeta._USER_SQL_QUERY] = DEFAULT_SQL_QUERY
-            st.session_state[SessionMeta._USER_SQL_RESULT] = None
+
 
 
     @staticmethod
@@ -97,8 +99,24 @@ class SessionMeta:
 
     @staticmethod
     def get_user_sql_result() -> Optional[pd.DataFrame]:
-        return st.session_state[SessionMeta._USER_SQL_RESULT]
+        return st.session_state.get(SessionMeta._USER_SQL_RESULT)
 
     @staticmethod
     def all_plots_available():
         return all([SessionMeta.get_query_results(result_enum) is not None for result_enum in QueryNames])
+
+    @staticmethod
+    def get_spark_table_sample() -> Optional[pd.DataFrame]:
+        return st.session_state.get(SessionMeta._USER_SQL_TABLE_SAMPLE)
+
+    @staticmethod
+    def set_spark_table_sample(df: pd.DataFrame):
+        st.session_state[SessionMeta._USER_SQL_TABLE_SAMPLE] = df
+
+    @staticmethod
+    def get_spark_table_dtypes() -> Optional[List]:
+        return st.session_state.get(SessionMeta._USER_SQL_TABLE_DTYPES)
+
+    @staticmethod
+    def set_spark_table_dtypes(df: pd.DataFrame):
+        st.session_state[SessionMeta._USER_SQL_TABLE_DTYPES] = df

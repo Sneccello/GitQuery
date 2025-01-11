@@ -42,38 +42,56 @@ def display_query_results(query):
         SessionMeta.set_user_sql_query(query)
         result_df = spark.sql(query)
         SessionMeta.set_user_sql_result(result_df.toPandas())
-        display_explain_query()
         st.write(result_df)
+        display_explain_query()
 
+def refresh_spark_table():
+    with st.spinner('Reading HDFS into Spark Dataframe...'):
+        commits = read_all_records(get_spark_session(), get_config(), SessionMeta.get_last_hdfs_repo_list_result())
+        commits.createOrReplaceTempView(UER_SQL_TABLE_NAME)
+        SessionMeta.set_spark_table_dtypes(commits.dtypes)
+        SessionMeta.set_spark_table_sample(commits.limit(5).toPandas())
+
+    st.rerun()
 def display_editor_space():
 
     if not SessionMeta.get_selected_repositories():
         st.write("##### No data found :( Add and/or Select repositories to visualize!")
         return
 
-    with st.spinner('Reading HDFS into Spark dataframe...'):
-        commits = read_all_records(get_spark_session(), get_config(), SessionMeta.get_last_hdfs_repo_list_result())
-        display_sidebar(commits.dtypes)
-        commits.createOrReplaceTempView(UER_SQL_TABLE_NAME)
-        st.markdown(f"<h2 style='color: #89CFF0;'>🌐 \"{UER_SQL_TABLE_NAME}\" Spark Dataframe</h2>", unsafe_allow_html=True)  # Light blue
-        st.write(commits.limit(5))
+    st.markdown(f"<h2 style='color: #89CFF0;'>🌐 \"{UER_SQL_TABLE_NAME}\" Spark Dataframe</h2>", unsafe_allow_html=True)
+    refresh_spark = st.button("Refresh view")
 
-    st.markdown("<h2 style='color: #B39DDB;'>📝 Your SQL Query</h2>", unsafe_allow_html=True)  # Soft lavender
+    if SessionMeta.get_spark_table_sample() is None or refresh_spark:
+        refresh_spark_table()
+
+    display_sidebar(SessionMeta.get_spark_table_dtypes())
+    st.write(SessionMeta.get_spark_table_sample())
+
+    st.markdown("<h2 style='color: #B39DDB;'>📝 Your SQL Query</h2>", unsafe_allow_html=True)
     response = code_editor(
         SessionMeta.get_user_sql_query(),
         lang="sql",
         height=len(SessionMeta.get_user_sql_query().split('\n')),
-        completions=[UER_SQL_TABLE_NAME, *COLUMNS.get_values()]
+        completions=[UER_SQL_TABLE_NAME, *COLUMNS.get_values()],
+        buttons=[{
+            "name": "Run Query",
+            "feather": "PlayCircle",
+            'hasText': True,
+            "alwaysOn": True,
+            "commands": ["submit"],
+            "style": {"top": "0.46rem", "right": "0.4rem"}
+        }]
     )
-    st.markdown("<h5 style='color: #B39DDB;'>Press CTRL+ENTER to RUN</h3>", unsafe_allow_html=True)
     st.markdown("<h2 style='color: #FFB74D;'>📊 Query Result</h2>", unsafe_allow_html=True)
 
-    if SessionMeta.get_user_sql_result() is None:
-        display_query_results(SessionMeta.get_user_sql_query())
-
-    elif response['type'] == 'submit':
+    if response['type'] == 'submit':
         user_query = response['text']
         display_query_results(user_query)
+
+    elif SessionMeta.get_user_sql_result() is None:
+        display_query_results(SessionMeta.get_user_sql_query())
+
 
 
 
