@@ -55,7 +55,7 @@ def display_editor_space():
         commits = read_all_records(get_spark_session(), get_config(), SessionMeta.get_last_hdfs_repo_list_result())
         display_sidebar(commits.dtypes)
         commits.createOrReplaceTempView(UER_SQL_TABLE_NAME)
-        st.markdown("<h2 style='color: #89CFF0;'>🌐 DataFrame</h2>", unsafe_allow_html=True)  # Light blue
+        st.markdown(f"<h2 style='color: #89CFF0;'>🌐 \"{UER_SQL_TABLE_NAME}\" Spark Dataframe</h2>", unsafe_allow_html=True)  # Light blue
         st.write(commits.limit(5))
 
     st.markdown("<h2 style='color: #B39DDB;'>📝 Your SQL Query</h2>", unsafe_allow_html=True)  # Soft lavender
