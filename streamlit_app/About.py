@@ -20,7 +20,7 @@ def read_readme_file():
 def setup():
 
     st.set_page_config(
-        page_title="GitBridge",
+        page_title="GitQuery",
         page_icon="🧊",
         layout="wide",
         initial_sidebar_state="expanded",

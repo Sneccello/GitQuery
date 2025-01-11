@@ -20,7 +20,7 @@ def clone_repo_thread(repo_url, clone_dir, progress_obj):
 
 def display_load_workflow(repo_link: str, partition_by: str):
     temp_dir_name = f"temp-dir-{str(hash(repo_link))}-{time.time()}"
-    temp_dir = os.path.join('/tmp/GitBridge/', temp_dir_name)
+    temp_dir = os.path.join('/tmp/GitQuery/', temp_dir_name)
 
     cloning_progress = st.progress(0, text='Cloning Repository...')
 

@@ -1,4 +1,4 @@
-# GitBridge
+# GitQuery
 
 ## About
 This tool allows users to compare statistics about repositories and query
@@ -7,6 +7,7 @@ You can ingest git repositories and make
 queries like "Who created the most files in all repositories"
 or "Which repository has the most deleted files".
 Data is uploaded to HDFS and queries are made with Spark, all containerized with Docker.
+
 
 ## Quickstart
 
@@ -43,8 +44,10 @@ Querying involves reading the ingested git metadata with Spark
 and running queries on the RDD. 
 The results are then visualized on the app with streamlit.
 ![query diagram](query-diag.drawio.svg)
-A few diagrams are auto-generated, but in the streamlit MPA, a SQL interface is
-also provided to interact with spark directly. You can run own your SQL commands
+
+
+A few diagrams are auto-generated, but in the streamlit application, a SQL interface is
+also provided to interact with spark directly. You can run your own SQL commands
 on the Spark RDD and see the result dataframe directly on the app. Additionally,
 you can take a look at the spark query plan, with some operations highlighted,
 such as utilized partition filtering when reading the dataset for the query.
