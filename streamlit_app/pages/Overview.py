@@ -1,11 +1,10 @@
 import streamlit as st
 
 from overview_plots import display_commit_activity, display_commits_per_repo, display_commits_per_author, \
-    display_file_changes_per_commit, display_file_status_counts, refresh_commits_per_author, refresh_commit_activity, \
-    refresh_file_status_counts, refresh_file_changes_per_commit, refresh_commits_per_repo
+    display_file_changes_per_commit, display_file_status_counts,  refresh_plot_data
 from overview_sidebar import render_sidebar
-from session_utils import SessionHandler, spark_repo_partition_to_repo_id, QueryNames, get_spark_session, get_config
-from spark_utils import read_all_records
+from session_utils import SessionHandler, spark_repo_partition_to_repo_id
+
 
 
 def display_filter():
@@ -26,24 +25,7 @@ def display_filter():
     refresh = st.button("Refresh Plots")
 
     if refresh or not SessionHandler.all_plots_available():
-        SessionHandler.unpersist_spark_basetable()
-
-        refresh_functions = [
-            refresh_commits_per_author,
-            refresh_commits_per_repo,
-            refresh_commit_activity,
-            refresh_file_changes_per_commit,
-            refresh_file_status_counts
-        ]
-        QUERYING_WITH_SPARK = "Querying with Spark.. (See Jobs at [http://localhost:4040](http://localhost:4040))"
-
-        query_pbar = st.progress(0, text=QUERYING_WITH_SPARK)
-        n_refresh = len(refresh_functions)
-        for idx, fn in enumerate(refresh_functions):
-            fn()
-            percentage = (idx+1) / n_refresh
-            query_pbar.progress(percentage, text=QUERYING_WITH_SPARK)
-        query_pbar.progress(100, text='Querying with Spark done!')
+        refresh_plot_data()
         st.rerun()
 
 def display_default_plots():

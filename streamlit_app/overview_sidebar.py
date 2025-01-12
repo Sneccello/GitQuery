@@ -8,6 +8,7 @@ import streamlit as st
 
 from git_utils import create_gitlog_file, get_repo_id, get_git_repo_link, CloneProgress
 from hdfs_utils import upload_to_hdfs, list_hdfs, filter_for_repo_folders
+from overview_plots import refresh_plot_data
 from session_utils import get_config, get_spark_session, SessionHandler, spark_repo_partition_to_repo_id
 from spark_utils import create_gitlog_rdd, COLUMNS
 
@@ -49,9 +50,10 @@ def display_load_workflow(repo_link: str, partition_by: str):
         )
         subprocess.run(['rm', output_filepath], check=True)
 
-    with st.spinner('Transforming with Spark...'):
+    with st.spinner('Transforming with Spark... (might take a while)'):
         create_gitlog_rdd(get_spark_session() ,get_config(), get_repo_id(repo_link), partition_by)
         refresh_hdfs()
+        refresh_plot_data()
         st.rerun()
 
 
@@ -97,9 +99,9 @@ def display_hdfs_list():
 
     repo_names = spark_repo_partition_to_repo_id(SessionHandler.get_last_hdfs_repo_list_result())
     config = get_config()
-    for rdd_dir in repo_names:
-        hdfs_url = f"http://localhost:{config.HDFS_HTTP_PORT}/explorer.html#/{config.HDFS_GITLOGS_PATH}/{rdd_dir}"
-        st.markdown(f"[{rdd_dir}]({hdfs_url})")
+    for repo_name in repo_names:
+        hdfs_url = f"http://localhost:{config.HDFS_HTTP_PORT}/explorer.html#/{config.HDFS_SPARK_OUTPUT_ROOT}/repo_id={repo_name}"
+        st.markdown(f"[{repo_name}]({hdfs_url})")
 
 
 def render_sidebar():

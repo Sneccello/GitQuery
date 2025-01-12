@@ -131,5 +131,5 @@ def create_gitlog_rdd(spark_session, config, repo_id, partition_by: str):
     (commits_with_gitlog_lines_ordered
      .write
      .partitionBy(COLUMNS.REPO_ID.value, partition_by)
-     .mode("overwrite")
+     .mode("append")
      .parquet(get_output_root_folder(config)))
