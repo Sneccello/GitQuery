@@ -8,7 +8,7 @@ import streamlit as st
 
 from git_utils import create_gitlog_file, get_repo_id, get_git_repo_link, CloneProgress
 from hdfs_utils import upload_to_hdfs, list_hdfs, filter_for_repo_folders
-from session_utils import get_config, get_spark_session, SessionMeta, spark_repo_partition_to_repo_id
+from session_utils import get_config, get_spark_session, SessionHandler, spark_repo_partition_to_repo_id
 from spark_utils import create_gitlog_rdd, COLUMNS
 
 
@@ -81,10 +81,10 @@ def refresh_hdfs():
 
     new_list = list_hdfs(get_config(), get_config().HDFS_SPARK_OUTPUT_ROOT)
 
-    SessionMeta.set_last_hdfs_repo_list_result(new_list)
+    SessionHandler.set_last_hdfs_repo_list_result(new_list)
 
-    SessionMeta.set_selected_repositories(
-        list(set(new_list + SessionMeta.get_selected_repositories()))
+    SessionHandler.set_selected_repositories(
+        list(set(new_list + SessionHandler.get_selected_repositories()))
     )
     return new_list
 
@@ -95,7 +95,7 @@ def display_hdfs_list():
         with st.spinner('Refreshing HDFS...'):
             refresh_hdfs()
 
-    repo_names = spark_repo_partition_to_repo_id(SessionMeta.get_last_hdfs_repo_list_result())
+    repo_names = spark_repo_partition_to_repo_id(SessionHandler.get_last_hdfs_repo_list_result())
     config = get_config()
     for rdd_dir in repo_names:
         hdfs_url = f"http://localhost:{config.HDFS_HTTP_PORT}/explorer.html#/{config.HDFS_GITLOGS_PATH}/{rdd_dir}"
