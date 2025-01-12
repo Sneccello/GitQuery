@@ -1,10 +1,7 @@
-import re
-from typing import List
 
 from hdfs import InsecureClient
 
 from config import Config
-from spark_utils import COLUMNS
 
 
 def get_client(config: Config) -> InsecureClient:
@@ -28,6 +25,8 @@ def list_hdfs(config, _dir='/'):
     files = client.list(_dir)
     return files
 
+def remove_path_if_exists(config, root_dir):
+    client = get_client(config)
+    if client.status(root_dir, strict=False) is not None:
+        client.delete(root_dir, recursive=True)
 
-def filter_for_repo_folders(hdfs_list: List[str]):
-    return [item for item in hdfs_list if re.match(f'{COLUMNS.REPO_ID.value}=', item) is not None]

@@ -1,5 +1,7 @@
 UER_SQL_TABLE_NAME = 'commits'
 
+PARTITION_COLUMNS = ["repo_id", "author"]
+
 DEFAULT_SQL_QUERY = \
     """
 --select authors with the most files created across all repositories

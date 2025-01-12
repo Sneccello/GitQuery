@@ -3,7 +3,7 @@ import enum
 from typing import List
 
 from pyspark import StorageLevel
-from pyspark.sql.functions import regexp_extract, to_timestamp, col, lit
+from pyspark.sql.functions import regexp_extract, col, lit
 from pyspark.sql.window import Window
 from pyspark.sql import functions as F
 
@@ -28,13 +28,6 @@ def read_all_records(spark_session, config, repositories: List[str]):
     df = spark_session.read.parquet(get_output_root_folder(config))
 
     df = df.filter(df.repo_id.isin(repositories))
-
-    df = df.withColumn("date",
-                       to_timestamp(F.concat_ws(" ", df["date"], df["timestamp"]), "yyyy-MM-dd HH:mm:ssZ")
-                       )
-
-    df.drop('timestamp')
-    df.persist(StorageLevel.DISK_ONLY)
 
     return df
 
@@ -69,7 +62,7 @@ def get_gitlogs_hdfs_folder(config):
 def get_output_root_folder(config):
     return f"hdfs://{config.HDFS_HOST}:{config.HDFS_RPC_PORT}{config.HDFS_SPARK_OUTPUT_ROOT}/"
 
-def create_gitlog_rdd(spark_session, config, repo_id, partition_by: str):
+def create_gitlog_rdd(spark_session, config, repo_id, partition_by: List):
 
     gitlog = spark_session.read.text(
         f"{get_gitlogs_hdfs_folder(config)}/{repo_id}.gitlog"
@@ -128,8 +121,9 @@ def create_gitlog_rdd(spark_session, config, repo_id, partition_by: str):
         *COLUMNS.get_values()
     )
 
+
     (commits_with_gitlog_lines_ordered
      .write
-     .partitionBy(COLUMNS.REPO_ID.value, partition_by)
-     .mode("append")
+     .partitionBy(*partition_by)
+     .mode('append')
      .parquet(get_output_root_folder(config)))

@@ -27,11 +27,7 @@ def get_git_repo_link(repo_or_gitfile: str):
 
 def create_gitlog_file(repo_dir: str, output_path: str):
     repo = git.Repo(repo_dir)
-    try:
-        repo.git.checkout('main')
-    except:
-        repo.git.checkout('master')
-
+    repo.git.checkout('HEAD')
     git_log_command = [
         'git', 'log', '--name-status',
         '--pretty=format:commit: %H%nparents: %P%nmessage: %s%nauthor: %ae%ndate: %ad',

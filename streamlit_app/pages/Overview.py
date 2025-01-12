@@ -18,6 +18,7 @@ def display_filter():
         SessionHandler.get_selected_repositories(),
         label_visibility="collapsed"
     )
+
     if options != SessionHandler.get_selected_repositories():
         SessionHandler.set_selected_repositories(options)
         st.rerun()

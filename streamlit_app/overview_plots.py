@@ -87,7 +87,7 @@ def refresh_file_status_counts():
 def display_file_status_counts():
 
     abs_counts = SessionHandler.get_query_results(QueryNames.FILE_STATUS_COUNTS)
-    abs_counts = abs_counts.set_index('repo_id')
+    abs_counts = abs_counts.set_index('repo_id').fillna(0)
     percentages = abs_counts.div(abs_counts.sum(axis=1), axis=0) * 100
     percentages = percentages[list(STATUSES.keys())]
     fig = go.Figure(

@@ -10,7 +10,7 @@ from pyspark.sql import SparkSession
 
 from config import Config
 from consts import DEFAULT_SQL_QUERY
-from hdfs_utils import list_hdfs, filter_for_repo_folders
+from hdfs_utils import list_hdfs
 from spark_utils import COLUMNS, read_all_records
 
 
@@ -57,9 +57,9 @@ class SessionHandler:
             SessionHandler.set_selected_repositories(
                 SessionHandler.get_last_hdfs_repo_list_result()
             )
-
+        if SessionHandler._QUERY_RESULTS not in st.session_state:
             st.session_state[SessionHandler._QUERY_RESULTS] = dict()
-
+        if SessionHandler._USER_SQL_QUERY not in st.session_state:
             st.session_state[SessionHandler._USER_SQL_QUERY] = DEFAULT_SQL_QUERY
 
 
@@ -77,8 +77,13 @@ class SessionHandler:
 
     @staticmethod
     def set_selected_repositories(hdfs_partitions):
-        folders = spark_repo_partition_to_repo_id(hdfs_partitions)
-        st.session_state[SessionHandler._SELECTED_REPOSITORIES] = folders
+        res = []
+        for partition in hdfs_partitions:
+            if m := re.match(f'{COLUMNS.REPO_ID.value}=(.+)', partition):
+                res.append(m[1])
+            elif m := re.match(f'.+_.+', partition):
+                res.append(m[0])
+        st.session_state[SessionHandler._SELECTED_REPOSITORIES] = list(set(res))
 
     @staticmethod
     def set_query_results(query_name: QueryNames, result: pd.DataFrame):
@@ -131,4 +136,7 @@ class SessionHandler:
 
 def spark_repo_partition_to_repo_id(hdfs_partitions):
     folders = filter_for_repo_folders(hdfs_partitions)
-    return[re.match(f'{COLUMNS.REPO_ID.value}=(.*)', folder)[1] for folder in folders]
+    return [re.match(f'{COLUMNS.REPO_ID.value}=(.*)', folder)[1] for folder in folders]
+
+def filter_for_repo_folders(hdfs_list: List[str]):
+    return [item for item in hdfs_list if re.match(f'{COLUMNS.REPO_ID.value}=', item) is not None]
