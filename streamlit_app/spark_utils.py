@@ -2,6 +2,7 @@ import datetime
 import enum
 from typing import List
 
+from pyspark import StorageLevel
 from pyspark.sql.functions import regexp_extract, to_timestamp, col, lit
 from pyspark.sql.window import Window
 from pyspark.sql import functions as F
@@ -33,6 +34,7 @@ def read_all_records(spark_session, config, repositories: List[str]):
                        )
 
     df.drop('timestamp')
+    df.persist(StorageLevel.DISK_ONLY)
 
     return df
 
@@ -41,21 +43,22 @@ def process_partition(iterator):
 
     for row in iterator:
         record = dict()
-
         assert len(row.lines) >= 5, f'invalid commit: {row.lines}'
+        PARENT_INDEX = 1
+        AUTHOR_INDEX = [idx for idx in range(len(row.lines)) if row.lines[idx].startswith('author:')][0]
+        DATE_INDEX = AUTHOR_INDEX + 1
         record['commit_hash'] = row.commit_hash
-        record['parents'] = row.lines[1].lstrip('parents: ').strip().split()
-        record['message'] = row.lines[2].lstrip('message: ').strip()
-        record['author'] = row.lines[3].lstrip('author: ').strip()
-
-        iso_date = row.lines[4].lstrip('date: ').strip()
+        record['parents'] = row.lines[PARENT_INDEX].lstrip('parents: ').strip().split()
+        record['message'] = " ".join(row.lines[PARENT_INDEX+1: AUTHOR_INDEX]).lstrip('message: ').strip()
+        record['author'] = row.lines[AUTHOR_INDEX].lstrip('author: ').strip()
+        iso_date = row.lines[DATE_INDEX].lstrip('date: ').strip()
         dt = datetime.datetime.fromisoformat(iso_date)
         day = dt.strftime('%Y-%m-%d')
         timestamp = dt.strftime('%H:%M:%S%z')
         record['date'] = day
         record['timestamp'] = timestamp
 
-        record['files'] = [{'status': f.strip()[0], 'filename': f[1:].strip()} for f in row.lines[5:]]
+        record['files'] = [{'status': f.strip()[0], 'filename': f[1:].strip()} for f in row.lines[DATE_INDEX+1:]]
         result.append(record)
     return result
 
