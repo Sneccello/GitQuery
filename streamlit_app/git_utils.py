@@ -1,16 +1,6 @@
+import os
 import subprocess
 
-import git
-from git import RemoteProgress
-
-class CloneProgress(RemoteProgress):
-    def __init__(self):
-        super().__init__()
-        self.progress = 0
-
-    def update(self, op_code, cur_count, max_count=None, message=''):
-        if max_count:
-            self.progress = (cur_count / max_count) * 100
 
 
 def get_repo_id(repo_link):
@@ -26,8 +16,11 @@ def get_git_repo_link(repo_or_gitfile: str):
 
 
 def create_gitlog_file(repo_dir: str, output_path: str):
-    repo = git.Repo(repo_dir)
-    repo.git.checkout('HEAD')
+
+    lock_path = os.path.join(repo_dir, '.git', 'index.lock')
+    if os.path.exists(lock_path):
+        subprocess.run(["rm", "-f", lock_path])
+
     git_log_command = [
         'git', 'log', '--name-status',
         '--pretty=format:commit: %H%nparents: %P%nmessage: %s%nauthor: %ae%ndate: %ad',

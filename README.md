@@ -6,12 +6,16 @@
 This tool allows users to compare statistics about repositories and query
 data about contributors across repositories. 
 You can ingest git repositories and make 
-queries like "Who created the most files in all repositories"
-or "Which repository has the most deleted files".
+queries like "Who deleted the most files in all repositories"
+or "Which users contributed to all repositories in a given list".
 Data is uploaded to HDFS and queries are made with Spark, all containerized with Docker.
 
 ## Features
-
+- Ingest git metadata to HDFS about any repository
+- See summarized overview about the loaded repositories on auto-generated graphs
+- Query Spark dataframe with the provided SQL interface
+- See how Spark executes queries. Some important Spark operations are highlighted 
+in the query plan, such as pushed partition filters or shuffles
 
 ## Quickstart
 
@@ -52,7 +56,7 @@ The results are then visualized on the app with streamlit.
 ![query diagram](query-diag.drawio.svg)
 
 
-A few diagrams are auto-generated, but in the streamlit application, a SQL interface is
+A few graphs are auto-generated, but in the streamlit application, a SQL interface is
 also provided to interact with spark directly. You can run your own SQL commands
 on the Spark RDD and see the result dataframe directly on the app. Additionally,
 you can take a look at the spark query plan, with some operations highlighted,

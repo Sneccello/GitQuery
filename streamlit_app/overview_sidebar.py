@@ -1,50 +1,34 @@
 import os
 import shutil
 import subprocess
-import threading
 import time
 from typing import List
 
-import git
 import requests
 import streamlit as st
 
 from consts import PARTITION_COLUMNS
-from git_utils import create_gitlog_file, get_repo_id, get_git_repo_link, CloneProgress
+from git_utils import create_gitlog_file, get_repo_id, get_git_repo_link
 from hdfs_utils import upload_to_hdfs, list_hdfs, remove_path_if_exists
 from overview_plots import refresh_plot_data
 from session_utils import get_config, get_spark_session, SessionHandler, spark_repo_partition_to_repo_id
 from spark_utils import create_gitlog_rdd, COLUMNS, get_output_root_folder
 
 
-def clone_repo_thread(repo_url, clone_dir, progress_obj):
-    try:
-        git.Repo.clone_from(repo_url, clone_dir, progress=progress_obj)
-    except Exception as e:
-        st.error(f"Error during clone: {e}")
 
 def display_load_workflow(repo_link: str, partition_by: List):
     temp_dir_name = f"temp-dir-{str(hash(repo_link))}-{time.time()}"
     temp_dir = os.path.join('/tmp/GitQuery/', temp_dir_name)
 
-    cloning_progress = st.progress(0, text='Cloning Repository...')
-
-    progress_obj = CloneProgress()
-    clone_thread = threading.Thread(target=clone_repo_thread, args=(repo_link, temp_dir, progress_obj))
-    clone_thread.start()
-
-    while True:
-        if progress_obj.progress >= 100:
-            cloning_progress.progress(100)
-            break
-        else:
-            cloning_progress.progress(progress_obj.progress / 100, text='Cloning Repository...')
-        time.sleep(1)
+    with st.spinner('Cloning Repository...'):
+        subprocess.run(['git', 'clone', repo_link, temp_dir], check=True)
+    st.write('Cloning Repository... DONE')
 
     with st.spinner('Generating Gitlog file...'):
         output_filepath = f"{get_repo_id(repo_link)}.gitlog"
         create_gitlog_file(temp_dir, output_filepath)
         shutil.rmtree(temp_dir)
+    st.write('Generating Gitlog file...... DONE')
 
     with st.spinner('Uploading Gitlog to HDFS...'):
         upload_to_hdfs(
@@ -53,6 +37,7 @@ def display_load_workflow(repo_link: str, partition_by: List):
             os.path.join(get_config().HDFS_GITLOGS_PATH, output_filepath)
         )
         subprocess.run(['rm', output_filepath], check=True)
+    st.write('Uploading Gitlog to HDFS... DONE')
 
     with st.spinner('Transforming textfile with Spark... (might take a while)'):
         config = get_config()
@@ -61,7 +46,9 @@ def display_load_workflow(repo_link: str, partition_by: List):
         create_gitlog_rdd(get_spark_session() ,get_config(), get_repo_id(repo_link), partition_by)
         refresh_hdfs()
         refresh_plot_data()
-        st.rerun()
+    st.write('Transforming textfile with Spark... DONE')
+    st.rerun()
+
 
 
 def repo_looks_valid(repo_link):
@@ -81,9 +68,9 @@ def display_add_workflow():
 
 
 
-    st.caption("**Data will be partitioned by**:")
+    st.write("**Data will be partitioned by**:")
     for i, col in enumerate(PARTITION_COLUMNS, 1):
-        st.caption(f"{i}. {col}")
+        st.write(f"{i}. {col}")
 
     start_load = st.button("🚀 Start Ingest Job")
     if start_load:
@@ -92,7 +79,7 @@ def display_add_workflow():
         if not is_ok:
             st.error(f'"{repo_link}" does not look valid')
             return
-        display_load_workflow(repo_link, partition_by)
+        display_load_workflow(repo_link, PARTITION_COLUMNS)
         refresh_hdfs()
         st.rerun()
 
