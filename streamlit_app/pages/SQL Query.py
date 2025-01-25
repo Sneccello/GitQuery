@@ -5,7 +5,7 @@ from code_editor import code_editor
 from pyspark.errors import ParseException
 from pyspark.shell import spark
 
-from consts import UER_SQL_TABLE_NAME
+from consts import UER_SQL_TABLE_NAME, DEFAULT_SQL_QUERY
 from session_utils import get_spark_session, get_config, SessionHandler
 from spark_utils import read_all_records, COLUMNS
 
@@ -70,9 +70,9 @@ def display_editor_space():
 
     st.markdown("<h2 style='color: #B39DDB;'>📝 Your SQL Query</h2>", unsafe_allow_html=True)
     response = code_editor(
-        SessionHandler.get_user_sql_query(),
+        DEFAULT_SQL_QUERY,
         lang="sql",
-        height=len(SessionHandler.get_user_sql_query().split('\n')),
+        height=max(10, len(SessionHandler.get_user_sql_query().split('\n'))),
         completions=[UER_SQL_TABLE_NAME, *COLUMNS.get_values()],
         buttons=[{
             "name": "Run Query",
@@ -80,20 +80,19 @@ def display_editor_space():
             'hasText': True,
             "alwaysOn": True,
             "commands": ["submit"],
-            "style": {"top": "0.46rem", "right": "0.4rem"}
+            "style": {"top": "0.46rem", "right": "0.4rem"},
+            "bindKey": { 'win': 'Ctrl-Enter', 'mac': 'Command-Enter' }
         }]
     )
     st.markdown("<h2 style='color: #FFB74D;'>📊 Query Result</h2>", unsafe_allow_html=True)
 
     if response['type'] == 'submit':
-        user_query = response['text']
-        display_query_results(user_query)
-
-    elif SessionHandler.get_user_sql_result() is None:
-        display_query_results(SessionHandler.get_user_sql_query())
-
-
-
+        try:
+            SessionHandler.set_user_sql_query(response['text'])
+            display_query_results(SessionHandler.get_user_sql_query())
+        except Exception as e:
+            st.write('oyyoy')
+            st.error(e)
 
 
 

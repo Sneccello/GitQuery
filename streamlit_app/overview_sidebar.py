@@ -10,26 +10,33 @@ import streamlit as st
 from consts import PARTITION_COLUMNS
 from git_utils import create_gitlog_file, get_repo_id, get_git_repo_link
 from hdfs_utils import upload_to_hdfs, list_hdfs, remove_path_if_exists
-from overview_plots import refresh_plot_data
 from session_utils import get_config, get_spark_session, SessionHandler, spark_repo_partition_to_repo_id
 from spark_utils import create_gitlog_rdd, COLUMNS, get_output_root_folder
 
 
+def format_time_elapsed(seconds: float) -> str:
+    partial_seconds = round(seconds - int(seconds), 1)
+    minutes, seconds = divmod(int(seconds), 60)
+    seconds += partial_seconds
+    return f"{minutes}m{seconds}s" if minutes > 0 else f"{seconds}s"
 
 def display_load_workflow(repo_link: str, partition_by: List):
     temp_dir_name = f"temp-dir-{str(hash(repo_link))}-{time.time()}"
     temp_dir = os.path.join('/tmp/GitQuery/', temp_dir_name)
 
+    start = time.time()
     with st.spinner('Cloning Repository...'):
         subprocess.run(['git', 'clone', repo_link, temp_dir], check=True)
-    st.write('Cloning Repository... DONE')
+    st.write(f'Cloning Repository... DONE ({format_time_elapsed(time.time()-start)})')
 
+    start = time.time()
     with st.spinner('Generating Gitlog file...'):
         output_filepath = f"{get_repo_id(repo_link)}.gitlog"
         create_gitlog_file(temp_dir, output_filepath)
         shutil.rmtree(temp_dir)
-    st.write('Generating Gitlog file...... DONE')
+    st.write(f'Generating Gitlog file...... DONE ({format_time_elapsed(time.time()-start)})')
 
+    start = time.time()
     with st.spinner('Uploading Gitlog to HDFS...'):
         upload_to_hdfs(
             get_config(),
@@ -37,17 +44,15 @@ def display_load_workflow(repo_link: str, partition_by: List):
             os.path.join(get_config().HDFS_GITLOGS_PATH, output_filepath)
         )
         subprocess.run(['rm', output_filepath], check=True)
-    st.write('Uploading Gitlog to HDFS... DONE')
+    st.write(f'Uploading Gitlog to HDFS... DONE ({format_time_elapsed(time.time()-start)})')
 
+    start = time.time()
     with st.spinner('Transforming textfile with Spark... (might take a while)'):
         config = get_config()
         repo_id = get_repo_id(repo_link)
         remove_path_if_exists(config, f'{get_output_root_folder(config)}{COLUMNS.REPO_ID.value}={repo_id}')
         create_gitlog_rdd(get_spark_session() ,get_config(), get_repo_id(repo_link), partition_by)
-        refresh_hdfs()
-        refresh_plot_data()
-    st.write('Transforming textfile with Spark... DONE')
-    st.rerun()
+    st.write(f'Transforming textfile with Spark... DONE ({format_time_elapsed(time.time()-start)})')
 
 
 
@@ -55,14 +60,14 @@ def repo_looks_valid(repo_link):
     try:
         response = requests.get(repo_link)
         return response.status_code == 200
-    except requests.exceptions.RequestException as e:
+    except requests.exceptions.RequestException:
         return False
 
 def display_add_workflow():
     st.markdown("<h2 style='color:#8e44ad;'>📥 Load Repository</h2>", unsafe_allow_html=True)
     repo_input = st.text_input(
         "Load Repository",
-        placeholder="https://github.com/Sneccello/WordMaze",
+        placeholder="https://github.com/streamlit/streamlit",
         label_visibility="collapsed"
     )
 
@@ -81,7 +86,6 @@ def display_add_workflow():
             return
         display_load_workflow(repo_link, PARTITION_COLUMNS)
         refresh_hdfs()
-        st.rerun()
 
 def refresh_hdfs():
 
