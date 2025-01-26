@@ -97,6 +97,8 @@ services:
       - PYTHON_VERSION=3.12
     volumes:
       - ./streamlit_app:/app
+      - ./media:/app/media
+      - ./README.md:/app/README.md
     networks:
       - spark-hadoop-network
     depends_on:
