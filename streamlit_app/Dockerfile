@@ -19,8 +19,6 @@ EXPOSE 8501
 
 ENV HDFS_URL="http://namenode:9870"
 
-EXPOSE 8501
-
 # Set HDFS configuration (e.g., to point to the Hadoop namenode)
 RUN echo "fs.defaultFS=${HDFS_NAMENODE_URI}" > $HADOOP_CONF_DIR/core-site.xml \
     && echo "<configuration>" >> $HADOOP_CONF_DIR/core-site.xml \
