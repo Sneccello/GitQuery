@@ -75,3 +75,6 @@ such as utilized partition filtering when reading the dataset for the query.
 When ingesting big repositories (several tens of thousands of commits), 
 try increasing the spark-worker memory parameter in the docker-compose file, 
 Spark might have run out of memory
+- **Git repository does not exist**:
+If the repository is private you can try logging in with your git credentials
+in the streamlit docker container, this container is responsible for cloning.
