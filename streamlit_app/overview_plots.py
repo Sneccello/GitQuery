@@ -32,7 +32,7 @@ def display_commits_per_author():
         new_row = pd.DataFrame([{'author': 'Other', 'count': other_commits}])
         top_authors = pd.concat([top_authors, new_row])
 
-    fig = px.pie(top_authors, names='author', values='count', title='Commits Per Author')
+    fig = px.pie(top_authors, names='author', values='count', title='Commits To All Repos Per Author')
     fig.update_traces(textinfo='none')
     st.plotly_chart(fig)
 
