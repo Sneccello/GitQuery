@@ -1,9 +1,9 @@
 UER_SQL_TABLE_NAME = 'commits'
 
-PARTITION_COLUMNS = ["repo_id"]
+PARTITION_COLUMNS = ["repo_id", 'author']
 
 DEFAULT_SQL_QUERY = \
-    """
+"""
 --select authors with the most files created across all repositories
 SELECT author, count(*) as n_created_files
 FROM (
@@ -16,4 +16,5 @@ LIMIT 5;
 
 ----Select Merge commits
 --SELECT * from commits
---WHERE size(parents) > 1"""
+--WHERE size(parents) > 1
+"""
