@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 import subprocess
 import time
@@ -34,7 +35,7 @@ def display_load_workflow(repo_link: str, partition_by: List):
         output_filepath = f"{get_repo_id(repo_link)}.gitlog"
         create_gitlog_file(temp_dir, output_filepath)
         shutil.rmtree(temp_dir)
-    st.write(f'Generating Gitlog file...... DONE ({format_time_elapsed(time.time()-start)})')
+    st.write(f'Generating Gitlog file... DONE ({format_time_elapsed(time.time()-start)})')
 
     start = time.time()
     with st.spinner('Uploading Gitlog to HDFS...'):
@@ -57,6 +58,12 @@ def display_load_workflow(repo_link: str, partition_by: List):
 
 
 def repo_looks_valid(repo_link):
+
+    github_gitlab_regex = \
+        '^(https:\/\/(?:www\.)?(github\.com|gitlab\.com)\/[A-Za-z0-9_\-]+\/[A-Za-z0-9_\-]+(?:\.git)?\/?)$'
+
+    if not re.match(github_gitlab_regex, repo_link):
+        return False
     try:
         response = requests.get(repo_link)
         return response.status_code == 200
@@ -82,7 +89,7 @@ def display_add_workflow():
         repo_link = get_git_repo_link(repo_input)
         is_ok = repo_looks_valid(repo_link)
         if not is_ok:
-            st.error(f'"{repo_link}" does not look valid')
+            st.error(f'"{repo_link}" does not look like a valid Github/Gitlab repository')
             return
         display_load_workflow(repo_link, PARTITION_COLUMNS)
         refresh_hdfs()
