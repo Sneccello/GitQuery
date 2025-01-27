@@ -1,6 +1,6 @@
 UER_SQL_TABLE_NAME = 'commits'
 
-PARTITION_COLUMNS = ["repo_id", 'author']
+PARTITION_COLUMNS = ["repo_id", 'author_first_char']
 
 DEFAULT_SQL_QUERY = \
 """

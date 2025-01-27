@@ -2,13 +2,14 @@ import datetime
 import enum
 from typing import List
 
-from pyspark.sql.functions import regexp_extract, col, lit, broadcast
+from pyspark.sql.functions import regexp_extract, col, lit, broadcast, substring, lower
 from pyspark.sql.window import Window
 from pyspark.sql import functions as F
 
 
 class COLUMNS(enum.Enum):
     AUTHOR = 'author'
+    AUTHOR_FIRST_CHAR = 'author_first_char'
     COMMIT_HASH = 'commit_hash'
     DATE = 'date'
     TIMESTAMP = 'timestamp'
@@ -116,12 +117,21 @@ def create_gitlog_rdd(spark_session, config, repo_id, partition_by: List):
     commits_with_gitlog_lines_ordered = commits_with_gitlog_lines_ordered.rdd.mapPartitions(process_partition).toDF()
 
     commits_with_gitlog_lines_ordered = commits_with_gitlog_lines_ordered.withColumn("repo_id", lit(repo_id))
+
+    commits_with_gitlog_lines_ordered = commits_with_gitlog_lines_ordered.withColumn(
+        COLUMNS.AUTHOR.name, lower(COLUMNS.AUTHOR.name)
+    )
+    commits_with_gitlog_lines_ordered = commits_with_gitlog_lines_ordered.withColumn(
+        COLUMNS.AUTHOR_FIRST_CHAR.name, lower(substring(col(COLUMNS.AUTHOR.name), 1, 1))
+    )
+
     commits_with_gitlog_lines_ordered = commits_with_gitlog_lines_ordered.select(
         *COLUMNS.get_values()
     )
 
 
     (commits_with_gitlog_lines_ordered
+     .repartition(COLUMNS.AUTHOR_FIRST_CHAR.name)
      .write
      .partitionBy(*partition_by)
      .mode('append')
