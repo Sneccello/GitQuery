@@ -2,8 +2,7 @@ import datetime
 import enum
 from typing import List
 
-from pyspark import StorageLevel
-from pyspark.sql.functions import regexp_extract, col, lit
+from pyspark.sql.functions import regexp_extract, col, lit, broadcast
 from pyspark.sql.window import Window
 from pyspark.sql import functions as F
 
@@ -94,10 +93,10 @@ def create_gitlog_rdd(spark_session, config, repo_id, partition_by: List):
         col("commits2.gitlog_line_idx").alias("next_commit_line_idx")
     )
 
-    join_condition = (F.col("commits.commit_line_idx") <= F.col("gitlog.gitlog_line_idx")) & (
-                F.col("gitlog.gitlog_line_idx") < F.col("commits.next_commit_line_idx"))
-
-    commits_with_gitlog_lines = gitlog.alias('gitlog').join(commits.alias('commits'), join_condition).select(
+    commits_with_gitlog_lines = gitlog.join(
+        broadcast(commits),
+        on=[commits.commit_line_idx <= gitlog.gitlog_line_idx, gitlog.gitlog_line_idx < commits.next_commit_line_idx],
+    ).select(
         "commit_hash",
         "gitlog_line",
         "gitlog_line_idx"
