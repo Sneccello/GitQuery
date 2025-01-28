@@ -15,7 +15,7 @@ STATUSES = {
 }
 
 def refresh_commits_per_author():
-    TOP_AUTHORS = 10
+    TOP_AUTHORS = 20
     df = read_all_records(get_spark_session(), get_config(), SessionHandler.get_selected_repositories())
     top_authors = df.groupBy('author').count().orderBy(desc('count')).limit(TOP_AUTHORS).toPandas()
 
@@ -120,7 +120,7 @@ def refresh_plot_data():
         refresh_file_changes_per_commit,
         refresh_file_status_counts
     ]
-    QUERYING_WITH_SPARK = "Querying with Spark.. (See Jobs at [http://localhost:4040](http://localhost:4040))"
+    QUERYING_WITH_SPARK = "Creating Plots.. (See Spark jobs at [http://localhost:4040](http://localhost:4040))"
 
     query_pbar = st.progress(0, text=QUERYING_WITH_SPARK)
     n_refresh = len(refresh_functions)

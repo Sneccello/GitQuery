@@ -10,7 +10,7 @@ import streamlit as st
 
 from consts import PARTITION_COLUMNS
 from git_utils import create_gitlog_file, get_repo_id, get_git_repo_link
-from hdfs_utils import upload_to_hdfs, list_hdfs, remove_path_if_exists
+from hdfs_utils import upload_to_hdfs, list_hdfs, remove_path_if_exists, get_file_size_mb
 from session_utils import get_config, get_spark_session, SessionHandler, spark_repo_partition_to_repo_id
 from spark_utils import create_gitlog_rdd, COLUMNS, get_output_root_folder
 
@@ -116,7 +116,8 @@ def display_hdfs_list():
     config = get_config()
     for repo_name in repo_names:
         hdfs_url = f"http://localhost:{config.HDFS_HTTP_PORT}/explorer.html#/{config.HDFS_SPARK_OUTPUT_ROOT}/repo_id={repo_name}"
-        st.markdown(f"[{repo_name}]({hdfs_url})")
+        size = get_file_size_mb(config, f'{config.HDFS_GITLOGS_PATH}/{repo_name}.gitlog')
+        st.markdown(f"[{repo_name}]({hdfs_url}) ({size}MB)")
 
 
 def render_sidebar():

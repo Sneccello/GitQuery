@@ -30,3 +30,10 @@ def remove_path_if_exists(config, root_dir):
     if client.status(root_dir, strict=False) is not None:
         client.delete(root_dir, recursive=True)
 
+def get_file_size_mb(config, filepath):
+    client = get_client(config)
+    status = client.status(filepath, strict=True)
+    length = status.get('length')
+    if length is None:
+        return -1
+    return round((length / 1024**2),2)
