@@ -24,7 +24,7 @@ in the query plan, such as pushed partition filters or shuffles
 ## Quickstart
 
 ```
-docker compose up [--scale spark-worker={#desiredWorkers}]
+docker compose up [--scale spark-worker=2]
 //start queries on http://localhost:8501
 ```  
 This will launch 
@@ -66,7 +66,7 @@ A few graphs are auto-generated, but in the streamlit application, a SQL interfa
 also provided to interact with spark directly. You can run your own SQL commands
 on the Spark RDD and see the result dataframe directly on the app. Additionally,
 you can take a look at the spark query plan, with some operations highlighted,
-such as utilized partition filtering when reading the dataset for the query.
+such as utilized partition filtering when reading ocker copthe dataset for the query.
 
 
 
