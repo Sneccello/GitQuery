@@ -3,7 +3,7 @@ import streamlit as st
 from session_utils import SessionHandler, get_spark_session, get_config, QueryNames
 from spark_utils import read_all_records
 from pyspark.sql import functions as F
-from pyspark.sql.functions import col,explode
+from pyspark.sql.functions import col, explode, desc
 import plotly.express as px
 import plotly.graph_objects as go
 
@@ -15,22 +15,20 @@ STATUSES = {
 }
 
 def refresh_commits_per_author():
+    TOP_AUTHORS = 10
     df = read_all_records(get_spark_session(), get_config(), SessionHandler.get_selected_repositories())
-    df = df.groupby('author').count().toPandas()
-    SessionHandler.set_query_results(QueryNames.COMMITS_PER_AUTHOR, df)
+    top_authors = df.groupBy('author').count().orderBy(desc('count')).limit(TOP_AUTHORS).toPandas()
+
+    count = df.count()
+
+    if (others := count - top_authors['count'].sum()) > 0:
+        new_row = pd.DataFrame([{'author': 'Others', 'count': others}])
+        top_authors = pd.concat([top_authors, new_row])
+
+    SessionHandler.set_query_results(QueryNames.COMMITS_PER_AUTHOR, top_authors)
 
 def display_commits_per_author():
-    df = SessionHandler.get_query_results(QueryNames.COMMITS_PER_AUTHOR)
-
-    df_sorted = df.sort_values(by='count', ascending=False)
-    TOP_N = 20
-    top_authors = df_sorted.head(TOP_N)
-
-    if len(top_authors) > TOP_N:
-        other_authors = df_sorted.tail(len(df_sorted) - TOP_N)
-        other_commits = other_authors['count'].sum()
-        new_row = pd.DataFrame([{'author': 'Other', 'count': other_commits}])
-        top_authors = pd.concat([top_authors, new_row])
+    top_authors = SessionHandler.get_query_results(QueryNames.COMMITS_PER_AUTHOR)
 
     fig = px.pie(top_authors, names='author', values='count', title='Commits To All Repos Per Author')
     fig.update_traces(textinfo='none')
@@ -53,7 +51,9 @@ def refresh_commit_activity():
         .groupBy("repo_id", "date") \
         .count() \
         .orderBy("date") \
-        .toPandas()
+
+    df = df.select('date', 'count', 'repo_id').toPandas()
+
     SessionHandler.set_query_results(QueryNames.COMMIT_ACTIVITY, df)
 
 def display_commit_activity():
@@ -63,7 +63,11 @@ def display_commit_activity():
 
 def refresh_file_changes_per_commit():
     df = read_all_records(get_spark_session(), get_config(), SessionHandler.get_selected_repositories())
-    df = df.withColumn("Modified Files Per Commit", F.size(F.col("files"))).toPandas()
+
+    df = (df.withColumn("Modified Files Per Commit", F.size(F.col("files")))
+          .select("Modified Files Per Commit", "repo_id")
+          .toPandas())
+
     SessionHandler.set_query_results(QueryNames.FILECHANGES_PER_COMMIT, df)
 
 def display_file_changes_per_commit():
