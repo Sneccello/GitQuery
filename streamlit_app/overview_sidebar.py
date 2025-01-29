@@ -115,7 +115,7 @@ def refresh_hdfs():
         return new_list
 
 def display_hdfs_list():
-    st.markdown("<h2 style='color:#3498db;'>📂 Loaded Repositories</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='color:#3498db;'>📂 Loaded Gitlog Files</h2>", unsafe_allow_html=True)
     refresh = st.button("🔄 Refresh HDFS")
     if refresh:
         refresh_hdfs()
