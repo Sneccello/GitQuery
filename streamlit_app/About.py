@@ -1,5 +1,6 @@
 import re
 import streamlit as st
+
 from session_utils import SessionHandler
 
 def display_markdown_with_images(markdown_string):
@@ -25,7 +26,6 @@ def setup():
         layout="wide",
         initial_sidebar_state="expanded",
     )
-
     SessionHandler.setup()
 
 

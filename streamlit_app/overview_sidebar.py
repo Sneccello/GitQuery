@@ -95,33 +95,43 @@ def display_add_workflow():
         refresh_hdfs()
 
 def refresh_hdfs():
+    with st.spinner('Refreshing HDFS...'):
+        new_list = list_hdfs(get_config(), get_config().HDFS_SPARK_OUTPUT_ROOT)
 
-    new_list = list_hdfs(get_config(), get_config().HDFS_SPARK_OUTPUT_ROOT)
+        SessionHandler.set_last_hdfs_repo_list_result(new_list)
 
-    SessionHandler.set_last_hdfs_repo_list_result(new_list)
+        SessionHandler.set_selected_repositories(
+            list(set(new_list + SessionHandler.get_selected_repositories()))
+        )
 
-    SessionHandler.set_selected_repositories(
-        list(set(new_list + SessionHandler.get_selected_repositories()))
-    )
-    return new_list
+        repo_names = spark_repo_partition_to_repo_id(new_list)
+        sizes = dict()
+        config = get_config()
+        for repo_name in repo_names:
+            size = get_file_size_mb(config, f'{config.HDFS_GITLOGS_PATH}/{repo_name}.gitlog')
+            sizes[repo_name] = size
+
+        SessionHandler.set_hdfs_file_sizes(sizes)
+        return new_list
 
 def display_hdfs_list():
     st.markdown("<h2 style='color:#3498db;'>📂 Loaded Repositories</h2>", unsafe_allow_html=True)
     refresh = st.button("🔄 Refresh HDFS")
     if refresh:
-        with st.spinner('Refreshing HDFS...'):
-            refresh_hdfs()
+        refresh_hdfs()
 
     repo_names = spark_repo_partition_to_repo_id(SessionHandler.get_last_hdfs_repo_list_result())
     config = get_config()
+    file_sizes = SessionHandler.get_hdfs_file_sizes()
     for repo_name in repo_names:
         hdfs_url = f"http://localhost:{config.HDFS_HTTP_PORT}/explorer.html#/{config.HDFS_SPARK_OUTPUT_ROOT}/repo_id={repo_name}"
-        size = get_file_size_mb(config, f'{config.HDFS_GITLOGS_PATH}/{repo_name}.gitlog')
-        st.markdown(f"[{repo_name}]({hdfs_url}) ({size}MB)")
+        st.markdown(f"[{repo_name}]({hdfs_url}) ({file_sizes.get(repo_name, 'unknown')}MB)")
 
 
 def render_sidebar():
     with st.sidebar:
         display_add_workflow()
         st.divider()
+        if len(SessionHandler.get_hdfs_file_sizes()) == 0:
+            refresh_hdfs()
         display_hdfs_list()

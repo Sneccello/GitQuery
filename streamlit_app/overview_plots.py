@@ -34,15 +34,6 @@ def display_commits_per_author():
     fig.update_traces(textinfo='none')
     st.plotly_chart(fig)
 
-def refresh_commits_per_repo():
-    df = read_all_records(get_spark_session(), get_config(), SessionHandler.get_selected_repositories())
-    df = df.groupby('repo_id').count().toPandas()
-    SessionHandler.set_query_results(QueryNames.COMMITS_PER_REPO, df)
-
-def display_commits_per_repo():
-    df = SessionHandler.get_query_results(QueryNames.COMMITS_PER_REPO)
-    fig = px.bar(df, x='repo_id', y='count', title='Repository Commits')
-    st.plotly_chart(fig)
 
 def refresh_commit_activity():
     df = read_all_records(get_spark_session(), get_config(), SessionHandler.get_selected_repositories())
@@ -53,26 +44,13 @@ def refresh_commit_activity():
         .orderBy("date") \
 
     df = df.select('date', 'count', 'repo_id').toPandas()
+    df['count'] = df.sort_values('date').groupby('repo_id')['count'].cumsum()
 
     SessionHandler.set_query_results(QueryNames.COMMIT_ACTIVITY, df)
 
 def display_commit_activity():
     df = SessionHandler.get_query_results(QueryNames.COMMIT_ACTIVITY)
     fig = px.line(df, x='date', y='count', color='repo_id', title='Commits Over Time')
-    st.plotly_chart(fig)
-
-def refresh_file_changes_per_commit():
-    df = read_all_records(get_spark_session(), get_config(), SessionHandler.get_selected_repositories())
-
-    df = (df.withColumn("Modified Files Per Commit", F.size(F.col("files")))
-          .select("Modified Files Per Commit", "repo_id")
-          .toPandas())
-
-    SessionHandler.set_query_results(QueryNames.FILECHANGES_PER_COMMIT, df)
-
-def display_file_changes_per_commit():
-    df = SessionHandler.get_query_results(QueryNames.FILECHANGES_PER_COMMIT)
-    fig = px.box(df, x='repo_id', y="Modified Files Per Commit", title='File Changes Per Commit')
     st.plotly_chart(fig)
 
 
@@ -115,12 +93,11 @@ def refresh_plot_data():
 
     refresh_functions = [
         refresh_commits_per_author,
-        refresh_commits_per_repo,
         refresh_commit_activity,
-        refresh_file_changes_per_commit,
-        refresh_file_status_counts
+        refresh_file_status_counts,
+        refresh_active_authors
     ]
-    QUERYING_WITH_SPARK = "Creating Plots.. (See Spark jobs at [http://localhost:4040](http://localhost:4040))"
+    QUERYING_WITH_SPARK = "Creating Plots... (See Spark jobs at [http://localhost:4040](http://localhost:4040))"
 
     query_pbar = st.progress(0, text=QUERYING_WITH_SPARK)
     n_refresh = len(refresh_functions)
@@ -128,4 +105,31 @@ def refresh_plot_data():
         fn()
         percentage = (idx + 1) / n_refresh
         query_pbar.progress(percentage, text=QUERYING_WITH_SPARK)
-    query_pbar.progress(100, text='Querying with Spark done!')
+    query_pbar.progress(100, text='Creating Plots... DONE!')
+
+
+def refresh_active_authors():
+    df = read_all_records(get_spark_session(), get_config(), SessionHandler.get_selected_repositories())
+
+    df = df.withColumn("date", F.to_date("date"))
+    df = df.withColumn("month",
+                       F.date_trunc("month", "date")
+                       )
+
+    distinct_authors_per_month = (
+        df
+        .groupBy("repo_id","month")
+        .agg(F.countDistinct("author").alias("active authors"))
+        .orderBy("month")
+    ).toPandas()
+
+    SessionHandler.set_query_results(QueryNames.ACTIVE_AUTHORS, distinct_authors_per_month)
+
+
+def display_active_authors():
+    active_authors = SessionHandler.get_query_results(QueryNames.ACTIVE_AUTHORS)
+
+    fig = px.line(active_authors, x='month', y='active authors', color='repo_id', title='Active Authors Over Time')
+
+    st.plotly_chart(fig)
+

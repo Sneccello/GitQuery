@@ -1,7 +1,6 @@
 import enum
 import os
 import re
-from token import COLON
 from typing import Optional, List
 
 import pandas as pd
@@ -33,13 +32,14 @@ def get_spark_session():
 
 class QueryNames(enum.Enum):
     COMMITS_PER_AUTHOR = enum.auto()
-    FILECHANGES_PER_COMMIT = enum.auto()
     COMMITS_PER_REPO = enum.auto()
     FILE_STATUS_COUNTS = enum.auto()
     COMMIT_ACTIVITY = enum.auto()
+    ACTIVE_AUTHORS = enum.auto()
 
 class SessionHandler:
     _HDFS_LIST_REPO_RESULT = 'key-hdfs_list_result'
+    _HDFS_FILE_SIZES = 'key-hdfs_file_sizes'
     _SELECTED_REPOSITORIES = 'key-selected_repositories'
     _QUERY_RESULTS = 'key-query_results'
     _USER_SQL_TABLE_SAMPLE = 'key-user_table_sample'
@@ -61,6 +61,8 @@ class SessionHandler:
             st.session_state[SessionHandler._QUERY_RESULTS] = dict()
         if SessionHandler._USER_SQL_QUERY not in st.session_state:
             st.session_state[SessionHandler._USER_SQL_QUERY] = DEFAULT_SQL_QUERY
+        if SessionHandler._HDFS_FILE_SIZES not in st.session_state:
+            st.session_state[SessionHandler._HDFS_FILE_SIZES] = dict()
 
 
     @staticmethod
@@ -110,10 +112,6 @@ class SessionHandler:
         return st.session_state.get(SessionHandler._USER_SQL_RESULT)
 
     @staticmethod
-    def all_plots_available():
-        return all([SessionHandler.get_query_results(result_enum) is not None for result_enum in QueryNames])
-
-    @staticmethod
     def get_spark_table_sample() -> Optional[pd.DataFrame]:
         return st.session_state.get(SessionHandler._USER_SQL_TABLE_SAMPLE)
 
@@ -133,6 +131,13 @@ class SessionHandler:
     def unpersist_spark_basetable():
         read_all_records(get_spark_session(), get_config(), SessionHandler.get_last_hdfs_repo_list_result()).unpersist()
 
+    @staticmethod
+    def set_hdfs_file_sizes(sizes: dict):
+        st.session_state[SessionHandler._HDFS_FILE_SIZES] = sizes
+
+    @staticmethod
+    def get_hdfs_file_sizes():
+        return st.session_state[SessionHandler._HDFS_FILE_SIZES]
 
 def spark_repo_partition_to_repo_id(hdfs_partitions):
     folders = filter_for_repo_folders(hdfs_partitions)

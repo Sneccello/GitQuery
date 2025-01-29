@@ -1,10 +1,9 @@
 import streamlit as st
 
-from overview_plots import display_commit_activity, display_commits_per_repo, display_commits_per_author, \
-    display_file_changes_per_commit, display_file_status_counts,  refresh_plot_data
+from overview_plots import display_commit_activity, display_commits_per_author, \
+    display_file_status_counts, refresh_plot_data, display_active_authors
 from overview_sidebar import render_sidebar
-from session_utils import SessionHandler, spark_repo_partition_to_repo_id
-
+from session_utils import SessionHandler, spark_repo_partition_to_repo_id, QueryNames
 
 
 def display_filter():
@@ -25,23 +24,22 @@ def display_filter():
 
     refresh = st.button("Refresh Plots")
 
-    if refresh or not SessionHandler.all_plots_available():
+    if refresh:
         refresh_plot_data()
         st.rerun()
 
 def display_default_plots():
 
-    display_commit_activity()
 
+    display_active_authors()
     col1, _,  col2 = st.columns([10, 1, 10])
 
     with col1:
         display_commits_per_author()
-        display_file_changes_per_commit()
     with col2:
         display_file_status_counts()
-        display_commits_per_repo()
 
+    display_commit_activity()
 
 def main():
     SessionHandler.setup()
@@ -49,7 +47,11 @@ def main():
     if not SessionHandler.get_selected_repositories():
         st.write("##### No data found :( Add repositories to visualize and refresh!")
         return
+
     display_filter()
+    if SessionHandler.get_query_results(QueryNames.COMMIT_ACTIVITY) is None:
+        refresh_plot_data()
+
     display_default_plots()
 
 
